@@ -22,3 +22,7 @@ if(!require("foreign")) {
   install.packages("foreign", repos="http://cran.rstudio.com/")
   require(foreign)
 }
+if(!require("leaflet")) {
+  install.packages("leaflet", repos="http://cran.rstudio.com/")
+  require(leaflet)
+}
