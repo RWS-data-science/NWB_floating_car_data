@@ -1,0 +1,35 @@
+library(rgdal)
+library(sp)
+library(tmap)
+library(sf)
+
+shape <- readOGR("db/shape", 'Wegvakken')
+
+
+
+proj4string(shape)
+
+
+for(i in 1:nrow(shape@data)){
+
+  
+  
+  xrand = c( min(coordinates(shape[i,])[[1]][[1]][,1]), max(coordinates(shape[i,])[[1]][[1]][,1])) 
+  yrand = c( min(coordinates(shape[i,])[[1]][[1]][,2]), max(coordinates(shape[i,])[[1]][[1]][,2])) 
+
+  xrand[1] = xrand[1] -  0.2*(xrand[2] - xrand[1])
+  xrand[2] = xrand[2] +  0.2*(xrand[2] - xrand[1])
+  
+  yrand[1] = yrand[1] -  0.2*(yrand[2] - yrand[1])
+  yrand[2] = yrand[2] +  0.2*(yrand[2] - yrand[1])
+  
+  
+   
+  
+  plot(x= xrand, y = yrand, col = 'red')
+  plot(shape[i,], add = TRUE)
+  browser()
+
+  }
+
+
