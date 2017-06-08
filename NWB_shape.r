@@ -12,7 +12,7 @@ proj4string(shape)
 
 for(i in 1:nrow(shape@data)){
 
-  
+  print(paste('wegvak ID:', shape@data$WVK_ID[i]))
   
   xrand = c( min(coordinates(shape[i,])[[1]][[1]][,1]), max(coordinates(shape[i,])[[1]][[1]][,1])) 
   yrand = c( min(coordinates(shape[i,])[[1]][[1]][,2]), max(coordinates(shape[i,])[[1]][[1]][,2])) 
@@ -24,11 +24,17 @@ for(i in 1:nrow(shape@data)){
   yrand[2] = yrand[2] +  0.2*(yrand[2] - yrand[1])
   
   
-   
+  
+  png(paste0(filename="db/wegvak_plaatjes/", i ))
+ 
   
   plot(x= xrand, y = yrand, col = 'red')
   plot(shape[i,], add = TRUE)
-  browser()
+  
+  
+  dev.off()
+  
+  #browser()
 
   }
 
