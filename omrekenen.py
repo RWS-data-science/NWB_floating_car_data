@@ -1,5 +1,3 @@
-# Formules voor benadering zijn gebaseerd op http://www.dekoepel.nl/pdf/Transformatieformules.pdf
-# Bovenstaande link werkt helaas niet meer, daar Stiching de Koepel opgeheven is. Backup link: http://media.thomasv.nl/2015/07/Transformatieformules.pdf
 
 class RDWGSConverter:
 

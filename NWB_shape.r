@@ -3,7 +3,7 @@ library(sp)
 library(tmap)
 library(sf)
 
-shape <- readOGR("db/shape", 'Wegvakken')
+shape <- readRDS('db/shape.rds')
 
 
 
@@ -34,7 +34,9 @@ for(i in 1:nrow(shape@data)){
   
   dev.off()
   
-  #browser()
+  plot(x= xrand, y = yrand, col = 'red')
+  plot(shape[i,], add = TRUE)
+  browser()
 
   }
 
