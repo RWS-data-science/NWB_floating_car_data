@@ -26,6 +26,7 @@ observe({
   if (input$kaart==T){
   leafletProxy("map") %>%
     addProviderTiles(providers$Esri.WorldGrayCanvas) %>%
+    #addProviderTiles(providers$CartoDB) %>%
     clearShapes() %>%
     addPolylines(data=strava,col="red",opacity = opa_float()) %>%
     addPolylines(data=nwb_select,weight = 5, opacity = opa_nwb(),popup= ~paste("WVK_ID: ",WVK_ID))
