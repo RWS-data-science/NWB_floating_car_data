@@ -9,7 +9,32 @@ strava<- readOGR("db/strava_rit.gpx","tracks")
 save(strava,file="db/strava.RData")
 
 ##laad NWB
-nwb_full<- readOGR("db/01-06-2017 2/Wegvakken/Wegvakken.shp")
+#
+
+url<- "https://www.rijkswaterstaat.nl/apps/geoservices/geodata/dmc/nwb-wegen/geogegevens/shapefile/Nederland_totaal/"
+
+library("rvest")
+# Get link URLs
+
+main.page <- read_html(url)
+folders <- main.page %>% # feed `main.page` to the next step
+  html_nodes("td a") %>% # get the CSS nodes
+  html_attr("href") 
+
+creation_date <- main.page %>% # feed `main.page` to the next step
+  html_nodes("tr td") %>% # get the CSS nodes
+  html_text() 
+
+#Select most recent
+creation_date<-creation_date[seq(3,length(creation_date),by=4)]
+creation_date<- as.POSIXct(creation_date,format="%d-%b-%Y %H:%M")
+max<- which.max(creation_date)
+
+download.file(paste0(url,folders[max]), "db/nwb.zip",quiet = T)
+unzip("db/nwb.zip",exdir = "db/")
+
+nwb_full<- readOGR("db/01-06-2017/Wegvakken/Wegvakken.shp")
+
 
 #convert to WGS
 rd<- "+proj=sterea +lat_0=52.15616055555555 +lon_0=5.38763888888889 +k=0.999908 +x_0=155000 +y_0=463000 +ellps=bessel +units=m +towgs84=565.2369,50.0087,465.658,-0.406857330322398,0.350732676542563,-1.8703473836068,4.0812 +no_defs"
@@ -22,7 +47,7 @@ save(nwb_full_wgs,file="db/nwb_full_wgs.RData")
 
 
 
-load("db/nwb_full_wgs.RData")
+#load("db/nwb_full_wgs.RData")
 
 ##clip nwb 
 xmin<- 4.6
@@ -45,11 +70,12 @@ library(rgeos)
 nwb_select<- nwb_full_wgs[Ps1,]
 plot(Ps1, axes = TRUE)
 lines(nwb_select)
+lines(strava,col="red")
 
 
 save(nwb_select,file="db/nwb_select.RData")
 
-
+library(leaflet)
 leaflet() %>% addProviderTiles(providers$Esri.WorldStreetMap) %>%
   setView(lng = 4.65, lat = 52.025, zoom = 13) %>%
   addPolylines(data=strava,col="red") %>%
