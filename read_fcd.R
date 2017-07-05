@@ -1,6 +1,6 @@
 library(data.table)
 
-basemap<- fread("fcd-wetransfer/basemap_13347/segments-static.csv")
+basemap<- fread("db/fcd-wetransfer/basemap_13347/segments-static.csv")
 
 
 #load nwb
@@ -25,8 +25,8 @@ Ps1 = SpatialPolygons(list(Polygons(list(P1), ID = "a")), proj4string=CRS(wgs))
 
 library(rgeos)
 nwb_select<- nwb_full_wgs[Ps1,]
-plot(Ps1, axes = TRUE)
-lines(nwb_select)
+#plot(Ps1, axes = TRUE)
+#lines(nwb_select)
 
 
 #convert FCD to spatial lines
@@ -44,8 +44,18 @@ p <- psp(begin.coord[,1], begin.coord[,2], end.coord[,1], end.coord[,2],     owi
 library(maptools)
 l<-as(p, "SpatialLines") 
 
+Sldf <- SpatialLinesDataFrame(l, data = basemap_select)
+
 library(leaflet)
-leaflet() %>% addTiles()  %>% addPolylines(data=l,col="red") %>% addPolylines(data=nwb_select)
+leaflet() %>% addTiles()  %>% addPolylines(data=Sldf,col="red",popup= ~paste("SegmentID:",SegmentID, "<br>",
+                                                                       "OptimalSpeedKPH: ",OptimalSpeedKPH)) %>% 
+  addPolylines(data=nwb_select,popup=~paste("WVK_ID: ",WVK_ID))
 
 
+####laad minuutdata
+fcd_samp<- read.table("db/fcd-wetransfer/09-01-15-000-d47c9fb0ee806c0982f1a2d1dbd90f47f45d10df.txt",
+                      sep=";",skip = 1,header = T)
 
+ggplot(fcd_samp,aes(x=SpeedKph))+geom_histogram(binwidth = 5,col="black")
+ggplot(fcd_samp,aes(x=Coverage))+geom_histogram(binwidth = 1,col="black")
+ggplot(fcd_samp,aes(x=Coverage,y=SpeedKph))+geom_hex()
