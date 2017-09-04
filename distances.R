@@ -1,8 +1,8 @@
 #nearest neighbor
 
-require(FNN)
-g = get.knnx(coordinates(uk_coord), coordinates(ire_coord),k=1)
-str(g)
+#require(FNN)
+##g = get.knnx(coordinates(uk_coord), coordinates(ire_coord),k=1)
+#str(g)
 #List of 2
 #$ nn.index: int [1:69, 1] 202 488 202 488 253 253 488 253 253 253 ...
 #$ nn.dist : num [1:69, 1] 232352 325375 87325 251770 203863 ...
@@ -18,3 +18,10 @@ base_select<- spTransform(base_select,rd)
 
 library(rgeos)
 dist<- gDistance(base_select,nwb_select,byid = T,hausdorff = T)
+dist<- as.numeric(dist)
+mindist<- apply(dist,2,min)
+whichmindist<- apply(dist,2,which.min)
+
+nn.df<- data.frame(osm_id = base_select$SegmentID,nn_nwb = nwb_select$WVK_ID[whichmindist],
+                   dist = mindist)
+
