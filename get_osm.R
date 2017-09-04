@@ -37,3 +37,5 @@ leaflet() %>% addTiles()  %>% addPolylines(data=Sldf,col="red",popup= ~paste("Se
 #laad shapefile
 library(rgdal)
 osm_shape<- readOGR("db/netherlands-latest-free.shp/gis.osm_roads_free_1.shp")
+
+nwb_full<- readOGR("db/01-06-2017/Wegvakken/Wegvakken.shp")
