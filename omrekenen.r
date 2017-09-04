@@ -1,4 +1,7 @@
 
+omrekenen = function(shape){
+
+
 python.load("omrekenen.py")
 
 # python.assign( 'coords', c(91819, 437802))
@@ -15,17 +18,21 @@ python.load("omrekenen.py")
 
 
 
-for(i in 1:length(shape@lines)){
+omgerekende_shape = lapply( c(1:length(shape@lines)), function(i){
   coords = shape@lines[[i]]@Lines[[1]]@coords
   
-  for(j in 1:nrow(coords)){
+  lapply( c(1:nrow(coords)), function(j){
+    
     
     python.assign('wgsCoords', coords[j,])
-    python.exec('wgsCoords = conv.fromRdToWgs( coords )')
-    coords[j,] = python.get('wgsCoords')
-    
-  }
+    python.exec('coords = conv.fromWgsToRd( wgsCoords )')
+    coords[j,] = python.get('coords')
+    coords[j,]
+  })
   
-  shape@lines[[i]]@Lines[[1]]@coords = coords
+  return(coords)
   
+})
+
+return(omgerekende_shape)
 }
