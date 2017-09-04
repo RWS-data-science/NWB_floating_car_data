@@ -1,3 +1,9 @@
+#all libraries
+source('lib.r')
+
+#convert shape to wgs
+source('omrekenen.r')
+
 #generic function to turn a shape into a shape file with equally distance points
 source('prepare_shape.r')
 #function to make a neigrest neighbour table from two point files
