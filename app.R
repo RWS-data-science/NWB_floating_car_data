@@ -10,12 +10,14 @@ shape = readOGR(filename)
 source('omrekenen.r')
 shape = omrekenen(shape)
 
-lines = shape@lines
-lines= lines[1:1000]
-pad = lines[[256]]@Lines[[1]]@coords
-
 lengte = 10
-spacing(pad = pad,lengte= lengte)
+
+shape@lines = pblapply( c(1:length(shape@lines)), function(i){
+  spacing(pad = shape@lines[[i]]@Lines[[1]]@coords  ,lengte= lengte)
+})
+
+
+
 
 
 

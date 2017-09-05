@@ -24,7 +24,7 @@ verschil = pad - rbind( pad,  pad[ n_rijen ,] )[-1,]
 verschil = rbind(c(0,0),verschil[-nrow(verschil),] )
 afstand = sqrt(verschil[,1]^2 + verschil[,2]^2)
 
-cumsum(afstand)
+
 
 
 
