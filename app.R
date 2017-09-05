@@ -11,7 +11,7 @@ shape = readOGR(filename)
 source('omrekenen.r')
 shape = omrekenen(shape)
 
-
+#converteer de shape naar een shape met om de lengte een punt
 source('prepare_shape.r')
 lengte = 10
 
