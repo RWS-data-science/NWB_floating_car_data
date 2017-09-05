@@ -27,7 +27,7 @@ library(rgeos)
 nwb_select<- nwb_full_wgs[Ps1,]
 #plot(Ps1, axes = TRUE)
 #lines(nwb_select)
-
+#save(nwb_select,file="db/nwb_select2.RData")
 
 #convert FCD to spatial lines
 
@@ -45,6 +45,7 @@ library(maptools)
 l<-as(p, "SpatialLines") 
 
 Sldf <- SpatialLinesDataFrame(l, data = basemap_select)
+#save(Sldf,file="db/fcd_select.RData")
 
 library(leaflet)
 leaflet() %>% addTiles()  %>% addPolylines(data=Sldf,col="red",popup= ~paste("SegmentID:",SegmentID, "<br>",
