@@ -1,6 +1,12 @@
 filename = 'db/shape/Wegvakken.shx'
 shape = readOGR(filename)
 
+
+
+
+
+
+#test voor 1 line
 lines = shape@lines
 lines= lines[1:1000]
 pad = lines[[256]]@Lines[[1]]@coords

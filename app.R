@@ -10,6 +10,14 @@ shape = readOGR(filename)
 source('omrekenen.r')
 shape = omrekenen(shape)
 
+lines = shape@lines
+lines= lines[1:1000]
+pad = lines[[256]]@Lines[[1]]@coords
+
+lengte = 10
+spacing(pad = pad,lengte= lengte)
+
+
 
 #generic function to turn a shape into a shape file with equally distance points
 source('prepare_shape.r')
