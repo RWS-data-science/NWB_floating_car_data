@@ -1,21 +1,44 @@
-
 filename = 'db/shape/Wegvakken.shx'
 shape = readOGR(filename)
 
 lines = shape@lines
-data = shape@data
+lines= lines[1:1000]
+pad = lines[[256]]@Lines[[1]]@coords
 
-lines = lines[1:10000]
-data = data[1:10000,]
-lines[[1]]@lines
-
+lengte = 10
 
 
 
+#maak vector met afstand tot begin van ieder punt
+spacing = function(lengte, pad){
 
-for(i in 1:length(shape@lines)){
-  coords = shape@lines[[i]]@Lines[[1]]@coords
-  
-  print(coords)
+
+n_rijen = nrow(pad)
+verschil = pad - rbind( pad,  pad[ n_rijen ,] )[-1,]
+verschil = rbind(c(0,0),verschil[-nrow(verschil),] )
+afstand = sqrt(verschil[,1]^2 + verschil[,2]^2)
+
+cumsum(afstand)
+
+
+
+f_1 = approxfun(cumsum(afstand),pad[,1])
+f_2 = approxfun(cumsum(afstand),pad[,2])
+
+#interpoleer de functie
+afstand_totaal = sum(afstand)
+aantal = round(afstand_totaal/lengte)
+stap = afstand_totaal/aantal
+stapjes = stap * c(0:aantal)
+x = f_1(stapjes)
+y = f_2(stapjes)
+
+return(cbind(x,y))
+
 }
+
+
+  
+  
+
 
