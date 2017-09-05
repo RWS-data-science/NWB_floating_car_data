@@ -7,9 +7,12 @@ source('lib.r')
 #convert shape to wgs
 filename = 'db/shape/Wegvakken.shx'
 shape = readOGR(filename)
+
 source('omrekenen.r')
 shape = omrekenen(shape)
 
+
+source('prepare_shape.r')
 lengte = 10
 
 shape@lines = pblapply( c(1:length(shape@lines)), function(i){
