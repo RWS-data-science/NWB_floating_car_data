@@ -2,23 +2,35 @@
 source('lib.r')
 
 
+#martijn code osm en nwb inlezen
 
+#martijn code omzetten osm naar rdc
 
 #convert shape to wgs
 filename = 'db/shape/Wegvakken.shx'
 shape = readOGR(filename)
 
-source('omrekenen.r')
-shape = omrekenen(shape)
+#source('omrekenen.r')
+#shape = omrekenen(shape)
 
 #converteer de shape naar een shape met om de lengte een punt
 source('prepare_shape.r')
 lengte = 10
 
+#voor nwb en osm maak equidistant
 shape@lines = pblapply( c(1:length(shape@lines)), function(i){
   spacing(pad = shape@lines[[i]]@Lines[[1]]@coords  ,lengte= lengte)
 })
 
+
+#twee euquidistante shapes
+
+
+#vervang oude lijst in shape voor nieuwe lijst
+
+#neirest neigbourtabel
+
+#stemmen
 
 
 
