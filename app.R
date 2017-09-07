@@ -57,9 +57,8 @@ distance_matrix = cbind(1:nrow(distance_matrix), distance_matrix)
 
 colnames(distance_matrix) = c('index_OSM', 'index_NWB', 'Half_Hausdorfdistance')
 
-
-
-
+distance_matrix[,1] = OSM@data$Segment_ID[distance_matrix[,1]]
+distance_matrix[,2] = NWB@data$WVK_ID[distance_matrix[,1]]
 
 
 
