@@ -33,28 +33,32 @@ x = pblapply( c(1:length(nwb_select@lines)), function(i){
 nwb_select_split<- nwb_select
 nwb_select_split@lines<- x
 
-#neirest neigbourtabel
+#tabel met index en minimale hausdorfdistance
 source('half_hausdorf.r')
 OSM = shape
 NWB = shape
 
-lapply(c(1:length(OSM@lines)), function(i){
+distance_lijst = pblapply(c(1:length(OSM@lines)), function(i){
   
   hausdorf_distances_to_NWB_lines =   lapply(c(1:length(NWB@lines)),function(j){
-    half_hausdorf(OSM@lines[[i]]@lines[[1]]@coords, NWB@lines[[j]]@lines[[1]]@coords  )
+    half_hausdorf(OSM@lines[[i]]@Lines[[1]]@coords, NWB@lines[[j]]@Lines[[1]]@coords  )
   })
   
   
-  minimum_distance = min(hausdorf_distances_to_NWB_lines)
-  label = index(hausdorf_distances_to_NWB_lines == minimum_distance)
+  minimum_distance = min(unlist( hausdorf_distances_to_NWB_lines))
+  label = which( unlist(hausdorf_distances_to_NWB_lines) == minimum_distance)
   
-  
+  return(c(label, minimum_distance))
 })
 
 
+distance_matrix = do.call(rbind, distance_lijst)
+distance_matrix = cbind(1:nrow(distance_matrix), distance_matrix)
+
+colnames(distance_matrix) = c('index_OSM', 'index_NWB', 'Half_Hausdorfdistance')
 
 
-#stemmen
+
 
 
 
