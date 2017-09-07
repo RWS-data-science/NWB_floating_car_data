@@ -15,7 +15,7 @@ pad2 = lines[[257]]@Lines[[1]]@coords
 half_hausdorf(pad1,pad2)
 
 half_hausdorf = function(pad1, pad2){
-dis = rdist(pad1, pad2)
+dis = rdist(pad_OSM, pad_NWB)
 
 return(max(apply( dis , c(1), min)))
 }
