@@ -34,6 +34,25 @@ nwb_select_split<- nwb_select
 nwb_select_split@lines<- x
 
 #neirest neigbourtabel
+source('half_hausdorf.r')
+OSM = shape
+NWB = shape
+
+lapply(c(1:length(OSM@lines)), function(i){
+  
+  hausdorf_distances_to_NWB_lines =   lapply(c(1:length(NWB@lines)),function(j){
+    half_hausdorf(OSM@lines[[i]]@lines[[1]]@coords, NWB@lines[[j]]@lines[[1]]@coords  )
+  })
+  
+  
+  minimum_distance = min(hausdorf_distances_to_NWB_lines)
+  label = index(hausdorf_distances_to_NWB_lines == minimum_distance)
+  
+  
+})
+
+
+
 
 #stemmen
 
@@ -47,7 +66,6 @@ source('prepare_shape.r')
 #function to make a neigrest neighbour table from two point files
 
 #A function to match lines in two shape files with help of the neighrest neighbour table of the points that where added to the lines in step 1
-
 
 
 
