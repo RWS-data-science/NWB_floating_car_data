@@ -1,0 +1,21 @@
+filename = 'db/shape/Wegvakken.shx'
+shape = readOGR(filename)
+
+
+
+
+
+
+#test voor 1 line
+lines = shape@lines
+lines= lines[1:1000]
+pad1 = lines[[256]]@Lines[[1]]@coords
+pad2 = lines[[257]]@Lines[[1]]@coords
+
+half_hausdorf(pad1,pad2)
+
+half_hausdorf = function(pad1, pad2){
+dis = rdist(pad1, pad2)
+
+return(max(apply( dis , c(1), min)))
+}

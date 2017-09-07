@@ -1,13 +1,13 @@
 library(rPython)
 library(rgdal)
 library(sp)
-library(tmap)
+#library(tmap)
 library(sf)
 library(stats)
 library(pbapply)
-library(gdalUtils)
+#library(gdalUtils)
 library(rlist)
-
+library(fields)
 
 
 
