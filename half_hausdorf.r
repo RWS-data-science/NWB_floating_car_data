@@ -19,3 +19,12 @@ dis = rdist(pad_OSM, pad_NWB)
 
 return(max(apply( dis , c(1), min)))
 }
+
+
+
+
+mean_dist = function(pad_OSM, pad_NWB){
+  dis = rdist(pad_OSM, pad_NWB)
+  
+  return(mean(apply( dis , c(1), min)))
+}
