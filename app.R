@@ -35,8 +35,8 @@ nwb_select_split@lines<- x
 
 #tabel met index en minimale hausdorfdistance
 source('half_hausdorf.r')
-OSM = shape
-NWB = shape
+#OSM = shape
+#NWB = shape
 
 distance_lijst = pblapply(c(1:length(OSM@lines)), function(i){
   
