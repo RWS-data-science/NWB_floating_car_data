@@ -18,7 +18,7 @@ base_select<- spTransform(base_select,rd)
 
 #converteer de shape naar een shape met om de lengte een punt
 source('prepare_shape.r')
-lengte = 10
+lengte = 50
 
 #voor nwb en osm maak equidistant
 x = pblapply( c(1:length(nwb_select@lines)), function(i){
@@ -31,12 +31,14 @@ x = pblapply( c(1:length(nwb_select@lines)), function(i){
 
 #vervang oude lijst in shape voor nieuwe lijst
 nwb_select_split<- nwb_select
-nwb_select_split@lines<- x
+nwb_select_split@lines[[i]]@Lines[[1]]<- pblapply( c(1:length(nwb_select@lines)), function(i){
+  spacing(pad = nwb_select@lines[[i]]@Lines[[1]]@coords  ,lengte= lengte)
+})
 
 #tabel met index en minimale hausdorfdistance
 source('half_hausdorf.r')
-#OSM = shape
-#NWB = shape
+OSM = base_select
+NWB = nwb_select_split
 
 distance_lijst = pblapply(c(1:length(OSM@lines)), function(i){
   
@@ -46,16 +48,27 @@ distance_lijst = pblapply(c(1:length(OSM@lines)), function(i){
   
   
   minimum_distance = min(unlist( hausdorf_distances_to_NWB_lines))
-  label = which( unlist(hausdorf_distances_to_NWB_lines) == minimum_distance)
+  label = which.min( unlist(hausdorf_distances_to_NWB_lines) )
   
-  return(c(label, minimum_distance))
+  return(c(OSM$SegmentID[i],as.numeric(as.character(NWB$WVK_ID[label])), minimum_distance))
 })
 
 
-distance_matrix = do.call(rbind, distance_lijst)
-distance_matrix = cbind(1:nrow(distance_matrix), distance_matrix)
+distance_matrix = as.data.frame(do.call(rbind, distance_lijst))[,c(1:3)]
+#distance_matrix = as.data.frame(distance_matrix)[,c(1:3)]
 
-colnames(distance_matrix) = c('index_OSM', 'index_NWB', 'Half_Hausdorfdistance')
+
+colnames(distance_matrix) = c('OSM_id', 'NWB_id', 'Half_Hausdorfdistance')
+
+nn.df$nn_nwb_half<- distance_matrix$NWB_id[match(nn.df$osm_id,distance_matrix$OSM_id)]
+nn.df$dist_half<- distance_matrix$Half_Hausdorfdistance[match(nn.df$osm_id,distance_matrix$OSM_id)]
+
+#check difference between methods
+nn.df$diff<- as.integer(as.character(nn.df$nn_nwb)) - nn.df$nn_nwb_half
+
+
+
+
 
 distance_matrix[,1] = OSM@data$Segment_ID[distance_matrix[,1]]
 distance_matrix[,2] = NWB@data$WVK_ID[distance_matrix[,1]]
