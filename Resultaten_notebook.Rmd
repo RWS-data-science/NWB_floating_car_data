@@ -56,7 +56,9 @@ for (i in 1:nrow(nwb_select)){
 ```
 
 ##Half-Hausdorf distance
-Toelichting: Daan  
+We berekenen per OSM line en per NWB line de afstand van alle punten op de NWB line tot alle punten of de OSM line. Vervolgens nemen we voor ieder OSM punt de minimale afstand tot de punten op de NWB line. Van deze afstanden nemen we het maximum. Dit noemen we de half-hausdorf afstand tussen de twee lines. Voor idere OSM line matchen we de NWB line met de kleinste half-hausdorf afstand.
+
+ 
 
 ```{r,echo=T,eval=F,cache=T}
 
