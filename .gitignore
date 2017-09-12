@@ -12,7 +12,6 @@
 /db
 odbc_connect.R
 *.rds
-*.html
 *.csv
 *.RData
 
