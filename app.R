@@ -71,4 +71,23 @@ source('prepare_shape.r')
 #A function to match lines in two shape files with help of the neighrest neighbour table of the points that where added to the lines in step 1
 
 
+#koppel juncties uit OSM en NWB
+source('vind_juncties.r')
+
+juncties_OSM =vind_juncties(OSM)
+juncties_NWB = vind_juncties(NWB)
+
+
+min_dist_index = lapply(c(1:nrow(juncties_OSM)), function(i){
+  which(  rdist(juncties_OSM[i,], juncties_NWB) ==     min(rdist(juncties_OSM[i,], juncties_NWB) ))
+  
+})
+
+min_dist_index = unlist(min_dist_index)
+
+gekoppelde_juncties = cbind(juncties_OSM, juncties_NWB[min_dist_index,])
+
+
+colnames(gekoppelde_juncties) = c('x1', 'y1', 'x2', 'y2')
+
 
