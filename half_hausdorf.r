@@ -1,5 +1,5 @@
-# filename = 'db/shape/Wegvakken.shx'
-# shape = readOGR(filename)
+ # filename = 'db/shape/Wegvakken.shx'
+ # shape = readOGR(filename)
 # 
 # 
 # 

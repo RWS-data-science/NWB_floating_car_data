@@ -1,3 +1,5 @@
+
+
 vind_juncties = function(shape){
   
   points = data.frame()
