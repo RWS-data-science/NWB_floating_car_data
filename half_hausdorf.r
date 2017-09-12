@@ -15,7 +15,7 @@
 #half_hausdorf(pad1,pad2)
 
 half_hausdorf = function(pad_OSM, pad_NWB){
-dis = rdist(pad_OSM, pad_NWB)
+dis = rdist(pad_OSM, pad_NWB,compact=T)
 
 return(max(apply( dis , c(1), min)))
 }

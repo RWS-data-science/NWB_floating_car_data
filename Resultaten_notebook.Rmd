@@ -1,0 +1,126 @@
+---
+title: "NWB_FCD project"
+output: html_notebook
+---
+
+Project in opdracht van NWB projectteam, uitgevoerd door RWS Datalab.
+
+Team:  
+[Martijn Koole](martijn.koole@rws.nl) - Data Scientist  
+[Daan van der Maas](daan.vander.maas@rws.nl) - Data Scientist  
+[Jan Quist](jan.quist@rws.nl) - Data Scientist  
+[Steven van Gelder](steven.van.gelder@rws.nl) - Product manager  
+[Vikash Rambaran](vikash.rambaran@rws.nl) - Product Owner  
+
+
+#Data laden en preprocessing
+Onderstaande code importeert alle benodigde libraries en functies en laadt vervolgens de gebruikte data. Er is een uitsnede gemaakt van het NWB Wegvakken bestand van 01-06-2017 rondom Gouda. Vervolgens is een zelfde uitsnede gemaakt voor de Basemap die verkregen is via BeMobile (gebaseerd op Open Street Map, OSM). De uitsnede is in eerste instantie gemaakt om de rekentijd kort te houden tijdens ontwikkelen/testen. Dat gebeurt in het script read_fcd.R. Later kunnen dezelfde scripts gebruikt worden voor om over heel Nederland verschillen te detecteren.
+
+```{r, echo=TRUE,cache=T,eval=F}
+source('lib.r')
+load("db/basemap_select.RData")
+load("db/nwb_select2.RData")
+```
+
+Om het NWB bestand te kunnen vergelijken zullen deze op elkaar gemapt moeten worden. Hiervoor is voor ieder ieder lijnsegment uit de OSM basemap gezocht naar een 'nearest neighbor' in het NWB. Met behulp van de afstand tot de nearest neighbor kunnen afwijkingen worden gedetecteerd. Voorbeeld: Objecten in de OSM basemap die geen nearest neighbor in het NWB hebben binnen een bepaalde marge kunnen duiden op missende/onjuiste informatie in het NWB. Andersom (NWB object zonder OSM nearest neighbor) duidt op een weg die wel in NWB bestaat, maar niet in de OSM basemap. Om de afstand te bepalen tussen een object in de OSM basemap en een object in NWB, is gebruik gemaakt van een afgeleide van de [Hausdorff distance](https://en.wikipedia.org/wiki/Hausdorff_distance). Hiervoor is eerst nog enige bewerking gedaan.
+
+
+```{r,echo=T,eval=F}
+#Eerst worden beide shapes omgezet naar RD coordinaten, t.b.v. eenheid meter
+rd<- "+proj=sterea +lat_0=52.15616055555555 +lon_0=5.38763888888889 +k=0.999908 +x_0=155000 +y_0=463000 +ellps=bessel +units=m +towgs84=565.2369,50.0087,465.658,-0.406857330322398,0.350732676542563,-1.8703473836068,4.0812 +no_defs"
+
+nwb_select<- spTransform(nwb_select,rd)
+basemap_select<- spTransform(basemap_select,rd)
+
+```
+
+##Equidistant
+Beide bestanden bestaan uit Polyline shapes, maar de OSM basemap heeft een hogere resolutie het NWB (OSM segmenten zijn max 50 m. lang, NWB segmenten vaak langer). Met name bij langere en rechte NWB segmenten (weinig onderliggende punten in de polyline) levert dat problemen op bij het bepalen van de nearest neighbor. Om dat probleem te ondervangen zijn de NWB segmenten eerst kunstmatig opgeknipt in segmenten van max 50 m.
+
+```{r,echo=T,eval=F}
+source('prepare_shape.r')
+lengte = 50
+
+#Maak NWB equidistant
+x = pblapply( c(1:length(nwb_select@lines)), function(i){
+  spacing(pad = nwb_select@lines[[i]]@Lines[[1]]@coords  ,lengte= lengte)
+})
+
+for (i in 1:nrow(nwb_select)){
+  if(!any(is.na(x[[i]]))){ #alleen als er geen NA's zijn geproduceerd
+  nwb_select@lines[[i]]@Lines[[1]]@coords<- x[[i]]
+  }
+}
+
+
+```
+
+##Half-Hausdorf distance
+Toelichting: Daan  
+
+```{r,echo=T,eval=F,cache=T}
+
+basemap_select$segmentID<- as.integer(as.character(basemap_select$segmentID))
+source('half_hausdorf.r')
+OSM = basemap_select#[1:100,]
+NWB = nwb_select#[1:100,]
+
+distance_lijst = pblapply(c(1:length(OSM@lines)), function(i){
+  
+  hausdorf_distances_to_NWB_lines =   lapply(c(1:length(NWB@lines)),function(j){
+    half_hausdorf(OSM@lines[[i]]@Lines[[1]]@coords, NWB@lines[[j]]@Lines[[1]]@coords  )
+  })
+  
+  
+  minimum_distance = min(unlist( hausdorf_distances_to_NWB_lines))
+  label = which.min( unlist(hausdorf_distances_to_NWB_lines) )
+  
+  return(c(OSM$segmentID[i],as.numeric(as.character(NWB$WVK_ID[label])), minimum_distance))
+})
+
+#create df with nearest neighbors
+distance_matrix = as.data.frame(do.call(rbind, distance_lijst))[,c(1:3)]
+colnames(distance_matrix) = c('OSM_id', 'NWB_id', 'Half_Hausdorfdistance')
+
+```
+
+Leaflet om verschillen inzichtelijk te maken
+```{r}
+
+
+distance_matrix$ge50<- ifelse(distance_matrix$Half_Hausdorfdistance >=50, TRUE,FALSE) #hh distance greater than or equal to 50 m
+
+#merge
+basemap_select$nn_nwb_half<- distance_matrix$NWB_id[match(basemap_select$segmentID,distance_matrix$OSM_id)]
+basemap_select$ge50<- distance_matrix$ge50[match(basemap_select$segmentID,distance_matrix$OSM_id)]
+basemap_select$hh_dist<- distance_matrix$Half_Hausdorfdistance[match(basemap_select$segmentID,distance_matrix$OSM_id)]
+
+##back to wgs for plotting
+wgs<- "+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0"
+
+basemap_select_wgs<- spTransform(basemap_select,wgs)
+nwb_select_wgs<- spTransform(nwb_select,wgs)
+
+basemap_select_wgs<- basemap_select_wgs[order(basemap_select_wgs$nn_nwb_half),]
+nwb_select_wgs<- nwb_select_wgs[order(nwb_select_wgs$WVK_ID),]
+factpal <- colorFactor(c("green","black"), c(TRUE,FALSE))
+
+##leaflet
+leaflet() %>% addProviderTiles(providers$CartoDB.Positron)  %>% 
+  addPolylines(data=nwb_select_wgs,opacity=0.5,col="red",popup=~paste("WVK_ID: ",WVK_ID),group="NWB") %>% 
+  addPolylines(data=basemap_select_wgs,weight = 5,opacity=0.5,col=~factpal(ge50),group="OSM",
+               popup= ~paste("SegmentID:",segmentID, "<br>",
+                             "nn_nwb: ",nn_nwb_half, "<br>",
+                             "half_hausdorff: ", hh_dist)) %>%
+  # Layers control
+  addLayersControl(
+    overlayGroups = c("NWB", "OSM"),
+    options = layersControlOptions(collapsed = FALSE)
+  )
+
+```
+
+
+
+
+
