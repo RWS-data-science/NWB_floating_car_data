@@ -107,11 +107,16 @@ nwb_select_wgs<- spTransform(nwb_select,wgs)
 
 basemap_select_wgs<- basemap_select_wgs[order(basemap_select_wgs$nn_nwb_half),]
 nwb_select_wgs<- nwb_select_wgs[order(nwb_select_wgs$WVK_ID),]
+
+
+#export for shiny
+#save(basemap_select_wgs,file="db/basemap_select_wgs.RData")
+#save(nwb_select_wgs,file="db/nwb_select_wgs.RData")
 factpal <- colorFactor(c("green","black"), c(TRUE,FALSE))
-factpal_nwb <- colorFactor(c("blue","red"), c(FALSE,TRUE))
+factpal_nwb <- colorFactor(c("red","blue"), c(TRUE,FALSE))
 
 ##leaflet
-leaflet() %>% addProviderTiles(providers$Esri.WorldGrayCanvas)  %>% 
+leaflet() %>% addProviderTiles(providers$CartoDB)  %>% 
   addPolylines(data=nwb_select_wgs,opacity=0.5,col=~factpal_nwb(is_nn50),
                popup=~paste("WVK_ID: ",WVK_ID),group="NWB",highlightOptions=highlightOptions(fillOpacity = 1,
                               bringToFront = TRUE) ) %>% 
