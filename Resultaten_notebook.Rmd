@@ -140,5 +140,17 @@ leaflet() %>% addProviderTiles(providers$CartoDB)  %>%
 
 
 
+##Juncties van OSM en NWB vergelijken
+```{r}
+source('juncties.r')
 
+OSM_juncties = vind_juncties(OSM)
+NWB_juncties = vind_juncties(NWB)
+
+pblapply(c(1:nrow(OSM_juncties)), function(i){
+  
+})
+
+
+```
 
