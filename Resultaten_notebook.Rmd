@@ -147,9 +147,15 @@ source('juncties.r')
 OSM_juncties = vind_juncties(OSM)
 NWB_juncties = vind_juncties(NWB)
 
-pblapply(c(1:nrow(OSM_juncties)), function(i){
-  
+afstand_tot_NWB_junctie =  pblapply(c(1:nrow(OSM_juncties)), function(i){
+ x =  sqrt ( (NWB_juncties[,1] - OSM_juncties[i,1])^2   +   (NWB_juncties[,2] - OSM_juncties[i,2])^2 )
+ x = NWB_juncties[x == min(x),] 
+ 
+ return(x[1,])
+ 
 })
+
+OSM_juncties = cbind(OSM_juncties, afstand_tot_NWB_junctie)
 
 
 ```
