@@ -16,7 +16,7 @@ Team:
 #Data laden en preprocessing
 Onderstaande code importeert alle benodigde libraries en functies en laadt vervolgens de gebruikte data. Er is een uitsnede gemaakt van het NWB Wegvakken bestand van 01-06-2017 rondom Gouda. Vervolgens is een zelfde uitsnede gemaakt voor de Basemap die verkregen is via BeMobile (gebaseerd op Open Street Map, OSM). De uitsnede is in eerste instantie gemaakt om de rekentijd kort te houden tijdens ontwikkelen/testen. Dat gebeurt in het script read_fcd.R. Later kunnen dezelfde scripts gebruikt worden voor om over heel Nederland verschillen te detecteren.
 
-```{r, echo=TRUE,cache=T,eval=F}
+```{r, echo=F,cache=T,eval=F}
 source('lib.r')
 load("db/basemap_select.RData")
 load("db/nwb_select2.RData")
@@ -86,7 +86,7 @@ colnames(distance_matrix) = c('OSM_id', 'NWB_id', 'Half_Hausdorfdistance')
 
 ```
 
-Leaflet om verschillen inzichtelijk te maken
+##Leaflet om verschillen inzichtelijk te maken
 ```{r}
 
 
@@ -97,6 +97,8 @@ basemap_select$nn_nwb_half<- distance_matrix$NWB_id[match(basemap_select$segment
 basemap_select$ge50<- distance_matrix$ge50[match(basemap_select$segmentID,distance_matrix$OSM_id)]
 basemap_select$hh_dist<- distance_matrix$Half_Hausdorfdistance[match(basemap_select$segmentID,distance_matrix$OSM_id)]
 
+nwb_select$is_nn50<- ifelse(nwb_select$WVK_ID %in% basemap_select$nn_nwb_half[basemap_select$hh_dist<50],TRUE,FALSE )
+
 ##back to wgs for plotting
 wgs<- "+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0"
 
@@ -106,19 +108,28 @@ nwb_select_wgs<- spTransform(nwb_select,wgs)
 basemap_select_wgs<- basemap_select_wgs[order(basemap_select_wgs$nn_nwb_half),]
 nwb_select_wgs<- nwb_select_wgs[order(nwb_select_wgs$WVK_ID),]
 factpal <- colorFactor(c("green","black"), c(TRUE,FALSE))
+factpal_nwb <- colorFactor(c("blue","red"), c(FALSE,TRUE))
 
 ##leaflet
-leaflet() %>% addProviderTiles(providers$CartoDB.Positron)  %>% 
-  addPolylines(data=nwb_select_wgs,opacity=0.5,col="red",popup=~paste("WVK_ID: ",WVK_ID),group="NWB") %>% 
+leaflet() %>% addProviderTiles(providers$Esri.WorldGrayCanvas)  %>% 
+  addPolylines(data=nwb_select_wgs,opacity=0.5,col=~factpal_nwb(is_nn50),
+               popup=~paste("WVK_ID: ",WVK_ID),group="NWB",highlightOptions=highlightOptions(fillOpacity = 1,
+                              bringToFront = TRUE) ) %>% 
   addPolylines(data=basemap_select_wgs,weight = 5,opacity=0.5,col=~factpal(ge50),group="OSM",
                popup= ~paste("SegmentID:",segmentID, "<br>",
                              "nn_nwb: ",nn_nwb_half, "<br>",
-                             "half_hausdorff: ", hh_dist)) %>%
+                             "half_hausdorff: ", hh_dist),highlightOptions=highlightOptions(fillOpacity = 1,
+                              bringToFront = TRUE)) %>%
   # Layers control
   addLayersControl(
     overlayGroups = c("NWB", "OSM"),
-    options = layersControlOptions(collapsed = FALSE)
-  )
+    options = layersControlOptions(collapsed = FALSE)) %>%
+
+    addLegend("bottomright", colors = c("chartreuse","black","blue","red"), labels = c("Wel in OSM, ook in NWB","Wel in OSM, niet NWB",
+                                                                                  "Wel in NWB, ook in OSM","Wel in NWB, niet in OSM"),
+    title = "Legend",
+    opacity = 0.7)
+  
 
 ```
 
