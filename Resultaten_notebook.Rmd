@@ -141,22 +141,40 @@ leaflet() %>% addProviderTiles(providers$CartoDB)  %>%
 
 
 ##Juncties van OSM en NWB vergelijken
+Vind de juncties en bepaal voor iedere junctie in OSM het dichtsbijzijnde junctie in NWB en andersom
+
+
 ```{r}
-source('juncties.r')
+source('vind_juncties.r')
 
 OSM_juncties = vind_juncties(OSM)
 NWB_juncties = vind_juncties(NWB)
 
-afstand_tot_NWB_junctie =  pblapply(c(1:nrow(OSM_juncties)), function(i){
+dichtst_bijzijnde_NWB_junctie =  pblapply(c(1:nrow(OSM_juncties)), function(i){
  x =  sqrt ( (NWB_juncties[,1] - OSM_juncties[i,1])^2   +   (NWB_juncties[,2] - OSM_juncties[i,2])^2 )
  x = NWB_juncties[x == min(x),] 
+ print(x[1,])
+ return(x[1,])
+ 
+})
+do.call(rbind, x)
+OSM_juncties = cbind(OSM_juncties, dichtst_bijzijnde_NWB_junctie )
+
+
+
+dichtst_bijzijnde_OSM_junctie =  pblapply(c(1:nrow(NWB_juncties)), function(i){
+ x =  sqrt ( (OSM_juncties[,1] - NWB_juncties[i,1])^2   +   (OSM_juncties[,2] - NWB_juncties[i,2])^2 )
+ x = OSM_juncties[x == min(x),] 
  
  return(x[1,])
  
 })
+do.call(rbind, x)
 
-OSM_juncties = cbind(OSM_juncties, afstand_tot_NWB_junctie)
+NWB_juncties = cbind( dichtst_bijzijnde_OSM_junctie, NWB_juncties )
 
+juncties = rbind(OSM_juncties, NWB_juncties)
+juncties = juncties[!duplicated(juncties),]
 
 ```
 
