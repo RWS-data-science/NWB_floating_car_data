@@ -112,6 +112,8 @@ nwb_select_wgs<- nwb_select_wgs[order(nwb_select_wgs$WVK_ID),]
 #export for shiny
 #save(basemap_select_wgs,file="db/basemap_select_wgs.RData")
 #save(nwb_select_wgs,file="db/nwb_select_wgs.RData")
+#save(distance_matrix,file="db/dist_matrix.RData")
+
 factpal <- colorFactor(c("green","black"), c(TRUE,FALSE))
 factpal_nwb <- colorFactor(c("red","blue"), c(TRUE,FALSE))
 
@@ -137,7 +139,6 @@ leaflet() %>% addProviderTiles(providers$CartoDB)  %>%
   
 
 ```
-
 
 
 
