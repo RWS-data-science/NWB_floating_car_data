@@ -58,7 +58,7 @@ tabel$Coverage_totaal = tabel$Coverage_totaal  + tabel$Coverage
 tabel$SpeedKph = tabel$SpeedKph / tabel$Coverage
 
 #gooid segmentID van -1 weg
-tabel = tabel[ - which(tabel$SegmentID==1),] 
+tabel = tabel[ - which(tabel$SegmentID==-1),] 
 
 
 #verwijder kolomen 
