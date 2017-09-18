@@ -10,10 +10,13 @@
 library(shiny)
 require(leaflet)
 
+
+
 # Define server logic required to draw a histogram
 server<- function(input, output,session) {
   load("basemap_select_wgs.RData")
   load("nwb_select_wgs.RData")
+  
 
   base<- reactive({
     
@@ -21,15 +24,15 @@ server<- function(input, output,session) {
     
   
     #basemap_select_wgs$nn_nwb_half<- distance_matrix$NWB_id[match(basemap_select_wgs$segmentID,distance_matrix$OSM_id)]
-    basemap_select_wgs$trigger<- ifelse(basemap_select_wgs$hh_dist>= input$distance,TRUE,FALSE)
-    basemap_select_wgs
+    basemap_select_wgs_2$trigger<- ifelse(basemap_select_wgs_2$hh_dist>= input$distance,TRUE,FALSE)
+    basemap_select_wgs_2
    # basemap_select_wgs$hh_dist<- distance_matrix$Half_Hausdorfdistance[match(basemap_select_wgs$segmentID,distance_matrix$OSM_id)]
 
   })
 
   nwb<- reactive({
-    nwb_select_wgs$is_nn_dist<- ifelse(nwb_select_wgs$WVK_ID %in% basemap_select_wgs$nn_nwb_half[basemap_select_wgs$hh_dist< input$distance ],TRUE,FALSE )
-    nwb_select_wgs
+    nwb_select_wgs_2$is_nn_dist<- ifelse(nwb_select_wgs_2$WVK_ID %in% basemap_select_wgs_2$nn_nwb_half[basemap_select_wgs_2$hh_dist< input$distance ],TRUE,FALSE )
+    nwb_select_wgs_2
   })
   
 

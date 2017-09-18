@@ -5,6 +5,6 @@ account: koolem
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 214623
-bundleId: 981652
+bundleId: 985854
 url: https://koolem.shinyapps.io/nwb_fcd_demo/
-when: 1505397598.04905
+when: 1505722765.21734

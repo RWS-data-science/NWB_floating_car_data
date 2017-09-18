@@ -39,23 +39,35 @@ Beide bestanden bestaan uit Polyline shapes, maar de OSM basemap heeft een hoger
 
 ```{r,echo=T,eval=F}
 source('prepare_shape.r')
-lengte = 50
+lengte = 25
 
 #Maak NWB equidistant
 x = pblapply( c(1:length(nwb_select@lines)), function(i){
   spacing(pad = nwb_select@lines[[i]]@Lines[[1]]@coords  ,lengte= lengte)
 })
 
-for (i in 1:nrow(nwb_select)){
-  if(!any(is.na(x[[i]]))){ #alleen als er geen NA's zijn geproduceerd
-  nwb_select@lines[[i]]@Lines[[1]]@coords<- x[[i]]
-  }
-}
+# for (i in 1:nrow(nwb_select)){
+#   if(!any(is.na(x[[i]]))){ #alleen als er geen NA's zijn geproduceerd
+#   nwb_select@lines[[i]]@Lines[[1]]@coords<- x[[i]]
+#   }
+# }
+
+
+#Maak OSM equidistant
+x = pblapply( c(1:length(basemap_select@lines)), function(i){
+  spacing(pad = basemap_select@lines[[i]]@Lines[[1]]@coords  ,lengte= lengte)
+})
+
+# for (i in 1:nrow(basemap_select)){
+#   if(!any(is.na(x[[i]]))){ #alleen als er geen NA's zijn geproduceerd  @daan, code is aangepast zodat dit als het goed is niet meer gebeurt
+#   basemap_select@lines[[i]]@Lines[[1]]@coords<- x[[i]]
+#   }
+# }
 
 
 ```
 
-##Half-Hausdorf distance
+##MATCH lines door middel van meand distance
 We berekenen per OSM line en per NWB line de afstand van alle punten op de NWB line tot alle punten of de OSM line. Vervolgens nemen we voor ieder OSM punt de minimale afstand tot de punten op de NWB line. Van deze afstanden nemen we het maximum. Dit noemen we de half-hausdorf afstand tussen de twee lines. Voor idere OSM line matchen we de NWB line met de kleinste half-hausdorf afstand.
 
  
@@ -70,7 +82,7 @@ NWB = nwb_select#[1:100,]
 distance_lijst = pblapply(c(1:length(OSM@lines)), function(i){
   
   hausdorf_distances_to_NWB_lines =   lapply(c(1:length(NWB@lines)),function(j){
-    half_hausdorf(OSM@lines[[i]]@Lines[[1]]@coords, NWB@lines[[j]]@Lines[[1]]@coords  )
+    mean_dist(OSM@lines[[i]]@Lines[[1]]@coords, NWB@lines[[j]]@Lines[[1]]@coords  )
   })
   
   
@@ -142,4 +154,81 @@ leaflet() %>% addProviderTiles(providers$CartoDB)  %>%
 
 
 
+##Juncties van OSM en NWB vergelijken
+Vind de juncties en bepaal voor iedere junctie in OSM het dichtsbijzijnde junctie in NWB en andersom
 
+
+```{r}
+
+#VUL HIER NIET DE EQUIDISTANTE SHAPE IN MAAR DE ORGINELE SHAPES!
+source('vind_juncties.r')
+
+OSM_juncties = vind_juncties(OSM)
+NWB_juncties = vind_juncties(NWB)
+
+dichtst_bijzijnde_NWB_junctie =  pblapply(c(1:nrow(OSM_juncties)), function(i){
+ x =  sqrt ( (NWB_juncties[,1] - OSM_juncties[i,1])^2   +   (NWB_juncties[,2] - OSM_juncties[i,2])^2 )
+ x = NWB_juncties[x == min(x),] 
+ return(x[1,])
+ 
+})
+
+dichtst_bijzijnde_NWB_junctie =  do.call(rbind, dichtst_bijzijnde_NWB_junctie)
+OSM_juncties = cbind(OSM_juncties, dichtst_bijzijnde_NWB_junctie )
+colnames(OSM_juncties) = c('x_OSM', 'y_OSM', 'x_NWB', 'y_NWB')
+
+
+dichtst_bijzijnde_OSM_junctie =  pblapply(c(1:nrow(NWB_juncties)), function(i){
+ x =  sqrt ( (OSM_juncties[,1] - NWB_juncties[i,1])^2   +   (OSM_juncties[,2] - NWB_juncties[i,2])^2 )
+ x = OSM_juncties[x == min(x),] 
+ 
+ return(x[1,])
+ 
+})
+
+<<<<<<< HEAD
+=======
+dichtst_bijzijnde_OSM_junctie =  do.call(rbind, dichtst_bijzijnde_OSM_junctie)
+NWB_juncties = cbind(dichtst_bijzijnde_NWB_junctie , OSM_juncties )
+colnames(NWB_juncties) = c('x_NWB', 'y_NWB', 'x_OSM', 'y_OSM')
+
+
+```
+
+##Vind afwijkende vormen doormiddeln van de hausdorf distance
+Vind voor alle punten op een NWB segment de dichtsbijzijnde punten van OSM. Kijk of het maximum en het gemiddelde niet tever afwijken.
+
+
+
+
+ 
+
+```{r,echo=T,eval=F,cache=T}
+#GEBRUIK NU WEL EQUIDISTANTE SHAPES
+
+#zet alle punten van OSM in een dataframe
+
+points_OSM = pblapply(c(1:length(OSM@lines)), function(i){
+  OSM@lines[[i]]@Lines[[1]]@coords
+})
+points_OSM = do.call(rbind, points_OSM)
+points_OSM = points_OSM[!duplicated(points_OSM),]
+
+#loop door alle NWB lines heen en bereken voor iedere line de minimale afstand tot een punt in OSM
+
+NWB_to_OSM_points = pblapply(c(1:length(NWB@lines)), function(i){
+  
+  min_distances = lapply(c(1:nrow(NWB@lines[[i]]@Lines[[1]]@coords)), function(j){
+    distances = sqrt( (  NWB@lines[[i]]@Lines[[1]]@coords[j,1] - points_OSM[,1]  )^2  +  (  NWB@lines[[i]]@Lines[[1]]@coords[j,2] - points_OSM[,2]  )^2 )
+    min(distances)
+    
+  })
+  min_distances = unlist(min_distances)
+  
+  return( c(max(min_distances), mean(min_distances)))
+})
+
+NWB_to_OSM_points = do.call(rbind, NWB_to_OSM_points)
+colnames(NWB_to_OSM_points) = c('max_distance', 'mean_distance')
+```
+>>>>>>> 71591fac6c77b5e0fdd1f276afeb316e7872b963

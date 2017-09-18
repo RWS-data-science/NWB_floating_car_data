@@ -33,13 +33,17 @@ f_2 = approxfun(cumsum(afstand),pad[,2])
 
 #interpoleer de functie
 afstand_totaal = sum(afstand)
-aantal = round(afstand_totaal/lengte)
+aantal = floor(afstand_totaal/lengte)
 stap = afstand_totaal/aantal
 stapjes = stap * c(0:aantal)
 x = f_1(stapjes)
 y = f_2(stapjes)
 
-return(cbind(x,y))
+output = cbind(x,y)
+
+output = rbind(output, pad[n_rijen,])
+
+return(output)
 
 }
 
