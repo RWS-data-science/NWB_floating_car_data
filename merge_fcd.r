@@ -23,7 +23,7 @@ uren = uur1:uur2
 files = list.files(dir)
 
 #initialiseer starttabel
-tabel = data.frame('SegmentID' = -1,'Coverage_totaal' = 0  ,'SpeedKph_totaal' = 0) 
+tabel = data.frame('SegmentID' = -1,'Coverage_totaal' = 0  ,'SpeedKph_totaal' = 0, 'aantal_keer_totaal' = 0) 
 
 
 
@@ -38,6 +38,8 @@ for(i in 1:length(files)){
   
 tabel_nieuw = read.table( paste(dir , files[i], sep = '/') , sep = ';', skip = 1, header = TRUE)
 
+tabel_nieuw$aantal_keer = 1
+
 #merge nieuwe tabel met de oude
 tabel =  merge(x = tabel, y = tabel_nieuw, key = 'SegmentID', all.x = TRUE, all.y = TRUE)
 
@@ -47,6 +49,7 @@ tabel[is.na(tabel)] = 0
 tabel_nieuw[is.na(tabel_nieuw)] = 0
 tabel$SpeedKph_totaal = tabel$SpeedKph_totaal+ tabel$SpeedKph* tabel$Coverage
 tabel$Coverage_totaal = tabel$Coverage_totaal  + tabel$Coverage
+tabel$aantal_keer_totaal = tabel$aantal_keer_totaal + tabel_nieuw$aantal_keer
 
 
 
@@ -66,6 +69,7 @@ tabel$Coverage = NULL
 tabel$SpeedKph = NULL
 tabel$LOS.Reference = NULL
 tabel$TraveltimeMS = NULL
+tabel$aantal_keer = NULL
 
 return(tabel)
 }
