@@ -1,11 +1,4 @@
 
-dir = 'db/fcd'
-uur1 = 19
-uur2 = 6
-
-tabel = merge_tables(dir = dir,uur1 = uur1, uur2 = uur2)
-
-
 
 
 

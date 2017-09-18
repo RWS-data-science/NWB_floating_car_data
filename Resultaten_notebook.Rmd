@@ -232,3 +232,21 @@ NWB_to_OSM_points = do.call(rbind, NWB_to_OSM_points)
 colnames(NWB_to_OSM_points) = c('max_distance', 'mean_distance')
 ```
 >>>>>>> 71591fac6c77b5e0fdd1f276afeb316e7872b963
+
+
+##Floating car data samenvoegen
+Dit stuk code leest alle tabellen van de floatin car data en maakt er een tabel van met 4 kolommen. Het wegsegment ID, de gemiddeld gereden snelheid, het aantal tabellen waarin het segement voorkomt en de cummulatieve intensiteit. Deze tabel word gemaakt voor 6-19 en 19-6 om rekening te houden met wisseling in maximum snelheid.
+
+```{r}
+source('merge_fcd.r')
+
+
+dir = 'db/fcd'
+uur1 = 6
+uur2 = 19
+
+tabel_overdag = merge_tables(dir = dir,uur1 = uur1, uur2 = uur2)
+tabel_nacht =  merge_tables(dir = dir,uur1 = uur2, uur2 = uur1)
+
+```
+
