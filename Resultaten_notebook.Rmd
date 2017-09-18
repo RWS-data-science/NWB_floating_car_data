@@ -124,6 +124,8 @@ nwb_select_wgs<- nwb_select_wgs[order(nwb_select_wgs$WVK_ID),]
 #export for shiny
 #save(basemap_select_wgs,file="db/basemap_select_wgs.RData")
 #save(nwb_select_wgs,file="db/nwb_select_wgs.RData")
+#save(distance_matrix,file="db/dist_matrix.RData")
+
 factpal <- colorFactor(c("green","black"), c(TRUE,FALSE))
 factpal_nwb <- colorFactor(c("red","blue"), c(TRUE,FALSE))
 
@@ -184,6 +186,8 @@ dichtst_bijzijnde_OSM_junctie =  pblapply(c(1:nrow(NWB_juncties)), function(i){
  
 })
 
+<<<<<<< HEAD
+=======
 dichtst_bijzijnde_OSM_junctie =  do.call(rbind, dichtst_bijzijnde_OSM_junctie)
 NWB_juncties = cbind(dichtst_bijzijnde_NWB_junctie , OSM_juncties )
 colnames(NWB_juncties) = c('x_NWB', 'y_NWB', 'x_OSM', 'y_OSM')
@@ -227,3 +231,4 @@ NWB_to_OSM_points = pblapply(c(1:length(NWB@lines)), function(i){
 NWB_to_OSM_points = do.call(rbind, NWB_to_OSM_points)
 colnames(NWB_to_OSM_points) = c('max_distance', 'mean_distance')
 ```
+>>>>>>> 71591fac6c77b5e0fdd1f276afeb316e7872b963
