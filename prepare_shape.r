@@ -25,15 +25,15 @@ verschil = rbind(c(0,0),verschil[-nrow(verschil),] )
 afstand = sqrt(verschil[,1]^2 + verschil[,2]^2)
 
 
-
-
-
-f_1 = approxfun(cumsum(afstand),pad[,1])
-f_2 = approxfun(cumsum(afstand),pad[,2])
+f_1 = approxfun(cumsum(afstand),pad[,1], rule = 2)
+f_2 = approxfun(cumsum(afstand),pad[,2], rule = 2)
 
 #interpoleer de functie
 afstand_totaal = sum(afstand)
 aantal = floor(afstand_totaal/lengte)
+
+
+if(aantal>0){
 stap = afstand_totaal/aantal
 stapjes = stap * c(0:aantal)
 x = f_1(stapjes)
@@ -44,6 +44,9 @@ output = cbind(x,y)
 output = rbind(output, pad[n_rijen,])
 
 return(output)
+}else{
+  return(pad)
+}
 
 }
 

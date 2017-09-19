@@ -39,18 +39,18 @@ Beide bestanden bestaan uit Polyline shapes, maar de OSM basemap heeft een hoger
 
 ```{r,echo=T,eval=F}
 source('prepare_shape.r')
-lengte = 25
+lengte = 10
 
 #Maak NWB equidistant
 x = pblapply( c(1:length(nwb_select@lines)), function(i){
-  spacing(pad = nwb_select@lines[[i]]@Lines[[1]]@coords  ,lengte= lengte)
+  as.data.frame(spacing(pad = nwb_select@lines[[i]]@Lines[[1]]@coords  ,lengte= lengte))
 })
 
-# for (i in 1:nrow(nwb_select)){
-#   if(!any(is.na(x[[i]]))){ #alleen als er geen NA's zijn geproduceerd
-#   nwb_select@lines[[i]]@Lines[[1]]@coords<- x[[i]]
-#   }
-# }
+for(i in 1:length(nwb_select@lines)){
+  colnames(x[[i]]) = c('x','y')
+  nwb_select@lines[[i]]@Lines[[1]]@coords = as.matrix(x[[i]])
+}
+
 
 
 #Maak OSM equidistant
@@ -58,16 +58,16 @@ x = pblapply( c(1:length(basemap_select@lines)), function(i){
   spacing(pad = basemap_select@lines[[i]]@Lines[[1]]@coords  ,lengte= lengte)
 })
 
-# for (i in 1:nrow(basemap_select)){
-#   if(!any(is.na(x[[i]]))){ #alleen als er geen NA's zijn geproduceerd  @daan, code is aangepast zodat dit als het goed is niet meer gebeurt
-#   basemap_select@lines[[i]]@Lines[[1]]@coords<- x[[i]]
-#   }
-# }
+for(i in 1:length(basemap_select@lines)){
+   colnames(x[[i]]) = c('x','y')
+  basemap_select@lines[[i]]@Lines[[1]]@coords = as.matrix(x[[i]])
+}
+
 
 
 ```
 
-##MATCH lines door middel van meand distance
+##MATCH lines door middel van mean distance
 We berekenen per OSM line en per NWB line de afstand van alle punten op de NWB line tot alle punten of de OSM line. Vervolgens nemen we voor ieder OSM punt de minimale afstand tot de punten op de NWB line. Van deze afstanden nemen we het maximum. Dit noemen we de half-hausdorf afstand tussen de twee lines. Voor idere OSM line matchen we de NWB line met de kleinste half-hausdorf afstand.
 
  
@@ -76,8 +76,8 @@ We berekenen per OSM line en per NWB line de afstand van alle punten op de NWB l
 
 basemap_select$segmentID<- as.integer(as.character(basemap_select$segmentID))
 source('half_hausdorf.r')
-OSM = basemap_select#[1:100,]
-NWB = nwb_select#[1:100,]
+OSM = basemap_select
+NWB = nwb_select
 
 distance_lijst = pblapply(c(1:length(OSM@lines)), function(i){
   
@@ -163,8 +163,10 @@ Vind de juncties en bepaal voor iedere junctie in OSM het dichtsbijzijnde juncti
 #VUL HIER NIET DE EQUIDISTANTE SHAPE IN MAAR DE ORGINELE SHAPES!
 source('vind_juncties.r')
 
-OSM_juncties = vind_juncties(OSM)
-NWB_juncties = vind_juncties(NWB)
+
+
+OSM_juncties = vind_juncties(basemap_select)
+NWB_juncties = vind_juncties(nwb_select)
 
 dichtst_bijzijnde_NWB_junctie =  pblapply(c(1:nrow(OSM_juncties)), function(i){
  x =  sqrt ( (NWB_juncties[,1] - OSM_juncties[i,1])^2   +   (NWB_juncties[,2] - OSM_juncties[i,2])^2 )
@@ -186,8 +188,6 @@ dichtst_bijzijnde_OSM_junctie =  pblapply(c(1:nrow(NWB_juncties)), function(i){
  
 })
 
-<<<<<<< HEAD
-=======
 dichtst_bijzijnde_OSM_junctie =  do.call(rbind, dichtst_bijzijnde_OSM_junctie)
 NWB_juncties = cbind(dichtst_bijzijnde_NWB_junctie , OSM_juncties )
 colnames(NWB_juncties) = c('x_NWB', 'y_NWB', 'x_OSM', 'y_OSM')
@@ -209,29 +209,39 @@ Vind voor alle punten op een NWB segment de dichtsbijzijnde punten van OSM. Kijk
 #zet alle punten van OSM in een dataframe
 
 points_OSM = pblapply(c(1:length(OSM@lines)), function(i){
-  OSM@lines[[i]]@Lines[[1]]@coords
+  as.data.frame(OSM@lines[[i]]@Lines[[1]]@coords)
 })
-points_OSM = do.call(rbind, points_OSM)
+points_OSM = rbindlist(points_OSM)
 points_OSM = points_OSM[!duplicated(points_OSM),]
 
-#loop door alle NWB lines heen en bereken voor iedere line de minimale afstand tot een punt in OSM
+#zet alle punten van het NWB in een dataframe
+points_NWB = pblapply(c(1:length(NWB@lines)), function(i){
+  as.data.frame(NWB@lines[[i]]@Lines[[1]]@coords)
+})
+points_NWB = rbindlist(points_NWB)
+points_NWB = points_NWB[!duplicated(points_NWB),]
 
-NWB_to_OSM_points = pblapply(c(1:length(NWB@lines)), function(i){
+
+
+#bereken de nearest neighbour afstand voor ieder punt in het nwb ten opzichten van de punten in het OSM
+
+NWB_to_OSM_points = pblapply(c(1:nrow(points_NWB)) , function(i){
   
-  min_distances = lapply(c(1:nrow(NWB@lines[[i]]@Lines[[1]]@coords)), function(j){
-    distances = sqrt( (  NWB@lines[[i]]@Lines[[1]]@coords[j,1] - points_OSM[,1]  )^2  +  (  NWB@lines[[i]]@Lines[[1]]@coords[j,2] - points_OSM[,2]  )^2 )
-    min(distances)
+
+    distances = sqrt( ( points_OSM[,1] - as.numeric(points_NWB[i,1])   )^2  +  (  points_OSM[,2] - as.numeric(points_NWB[i,2])   )^2 )
     
-  })
-  min_distances = unlist(min_distances)
+    
+    
   
-  return( c(max(min_distances), mean(min_distances)))
+  return( min(distances))
 })
 
-NWB_to_OSM_points = do.call(rbind, NWB_to_OSM_points)
-colnames(NWB_to_OSM_points) = c('max_distance', 'mean_distance')
+drempel = 30
+
+locaties_fouten = points_NWB[unlist(NWB_to_OSM_points) > drempel  ,] 
+
 ```
->>>>>>> 71591fac6c77b5e0fdd1f276afeb316e7872b963
+
 
 
 ##Floating car data samenvoegen
@@ -247,6 +257,50 @@ uur2 = 19
 
 tabel_overdag = merge_tables(dir = dir,uur1 = uur1, uur2 = uur2)
 tabel_nacht =  merge_tables(dir = dir,uur1 = uur2, uur2 = uur1)
+
+```
+
+
+
+##vind doodlopende wegen
+Er komen soms kleine onterechte aftakkingen voor in het NWB om die op te kunnen sporen vergelijken we expleciet de doodlopende wegen van het NWB met het OSM.
+
+```{r}
+
+
+  rand = data.frame('x'= -1, 'y' = -1)
+
+ for(i in 1:length(nwb_select@lines)){
+
+    nieuw = nwb_select@lines[[i]]@Lines[[1]]@coords
+    colnames(nieuw) = c('x','y')
+    rand_nieuw = rbind(nieuw[1,] ,nieuw[nrow(nieuw),])
+    
+    rand = rbind(rand, rand_nieuw)
+  
+ }
+rand = rand[-1,]
+
+doodlopend_nwb = rand[!duplicated(rand),]
+
+
+  rand = data.frame('x'= -1, 'y' = -1)
+
+ for(i in 1:length(basemap_select@lines)){
+
+    nieuw = basemap_select@lines[[i]]@Lines[[1]]@coords
+    colnames(nieuw) = c('x','y')
+    rand_nieuw = rbind(nieuw[1,] ,nieuw[nrow(nieuw),])
+    
+    rand = rbind(rand, rand_nieuw)
+  
+ }
+rand = rand[-1,]
+
+doodlopend_osm = rand[!duplicated(rand),]
+
+
+
 
 ```
 
