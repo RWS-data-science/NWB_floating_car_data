@@ -39,28 +39,31 @@ Beide bestanden bestaan uit Polyline shapes, maar de OSM basemap heeft een hoger
 
 ```{r,echo=T,eval=F}
 source('prepare_shape.r')
-lengte = 10
+lengte = 25
 
 #Maak NWB equidistant
+nwb_select_eq<- nwb_select
 x = pblapply( c(1:length(nwb_select@lines)), function(i){
-  as.data.frame(spacing(pad = nwb_select@lines[[i]]@Lines[[1]]@coords  ,lengte= lengte))
+  as.data.frame(spacing(pad = nwb_select_eq@lines[[i]]@Lines[[1]]@coords  ,lengte= lengte))
 })
+
 
 for(i in 1:length(nwb_select@lines)){
   colnames(x[[i]]) = c('x','y')
-  nwb_select@lines[[i]]@Lines[[1]]@coords = as.matrix(x[[i]])
+  nwb_select_eq@lines[[i]]@Lines[[1]]@coords = as.matrix(x[[i]])
 }
 
 
 
 #Maak OSM equidistant
+basemap_select_eq<- basemap_select
 x = pblapply( c(1:length(basemap_select@lines)), function(i){
-  spacing(pad = basemap_select@lines[[i]]@Lines[[1]]@coords  ,lengte= lengte)
+  spacing(pad = basemap_select_eq@lines[[i]]@Lines[[1]]@coords  ,lengte= lengte)
 })
 
-for(i in 1:length(basemap_select@lines)){
+for(i in 1:length(basemap_select_eq@lines)){
    colnames(x[[i]]) = c('x','y')
-  basemap_select@lines[[i]]@Lines[[1]]@coords = as.matrix(x[[i]])
+  basemap_select_eq@lines[[i]]@Lines[[1]]@coords = as.matrix(x[[i]])
 }
 
 
@@ -74,27 +77,42 @@ We berekenen per OSM line en per NWB line de afstand van alle punten op de NWB l
 
 ```{r,echo=T,eval=F,cache=T}
 
-basemap_select$segmentID<- as.integer(as.character(basemap_select$segmentID))
+basemap_select_eq$segmentID<- as.integer(as.character(basemap_select_eq$segmentID))
 source('half_hausdorf.r')
-OSM = basemap_select
-NWB = nwb_select
+OSM = basemap_select_eq
+NWB = nwb_select_eq
 
-distance_lijst = pblapply(c(1:length(OSM@lines)), function(i){
+distance_lijst_OSM = pblapply(c(1:length(OSM@lines)), function(i){
   
   hausdorf_distances_to_NWB_lines =   lapply(c(1:length(NWB@lines)),function(j){
     mean_dist(OSM@lines[[i]]@Lines[[1]]@coords, NWB@lines[[j]]@Lines[[1]]@coords  )
   })
   
   
-  minimum_distance = min(unlist( hausdorf_distances_to_NWB_lines))
+  minimum_distance_osm = min(unlist( hausdorf_distances_to_NWB_lines))
   label = which.min( unlist(hausdorf_distances_to_NWB_lines) )
   
-  return(c(OSM$segmentID[i],as.numeric(as.character(NWB$WVK_ID[label])), minimum_distance))
+  return(c(OSM$segmentID[i],as.numeric(as.character(NWB$WVK_ID[label])), minimum_distance_osm))
+})
+
+distance_lijst_NWB = pblapply(c(1:length(NWB@lines)), function(i){
+    hausdorf_distances_to_OSM_lines =   lapply(c(1:length(OSM@lines)),function(j){
+    mean_dist(NWB@lines[[i]]@Lines[[1]]@coords, OSM@lines[[j]]@Lines[[1]]@coords  )
+  })
+  
+  minimum_distance_nwb = min(unlist( hausdorf_distances_to_NWB_lines))
+  label = which.min( unlist(hausdorf_distances_to_NWB_lines) )
+  
+  return(c(NWB$WVK_ID[i],as.numeric(as.character(OSM$segmentID[label])), minimum_distance_nwb))
 })
 
 #create df with nearest neighbors
-distance_matrix = as.data.frame(do.call(rbind, distance_lijst))[,c(1:3)]
-colnames(distance_matrix) = c('OSM_id', 'NWB_id', 'Half_Hausdorfdistance')
+distance_matrix_OSM = as.data.frame(do.call(rbind, distance_lijst_OSM))[,c(1:3)]
+colnames(distance_matrix_OSM) = c('OSM_id', 'NWB_id', 'Half_Hausdorfdistance')
+
+#create df with nearest neighbors
+distance_matrix_NWB = as.data.frame(do.call(rbind, distance_lijst_NWB))[,c(1:3)]
+colnames(distance_matrix_NWB) = c('NWB_id', 'OSM_id', 'Half_Hausdorfdistance')
 
 ```
 
@@ -199,10 +217,6 @@ colnames(NWB_juncties) = c('x_NWB', 'y_NWB', 'x_OSM', 'y_OSM')
 Vind voor alle punten op een NWB segment de dichtsbijzijnde punten van OSM. Kijk of het maximum en het gemiddelde niet tever afwijken.
 
 
-
-
- 
-
 ```{r,echo=T,eval=F,cache=T}
 #GEBRUIK NU WEL EQUIDISTANTE SHAPES
 
@@ -248,10 +262,13 @@ locaties_fouten = points_NWB[unlist(NWB_to_OSM_points) > drempel  ,]
 Dit stuk code leest alle tabellen van de floatin car data en maakt er een tabel van met 4 kolommen. Het wegsegment ID, de gemiddeld gereden snelheid, het aantal tabellen waarin het segement voorkomt en de cummulatieve intensiteit. Deze tabel word gemaakt voor 6-19 en 19-6 om rekening te houden met wisseling in maximum snelheid.
 
 ```{r}
+library(foreign)
+base_full=read.dbf("db/basemaps/13354-shapes/segments.dbf")
+
 source('merge_fcd.r')
 
 
-dir = 'db/fcd'
+dir = 'db/06/01'
 uur1 = 6
 uur2 = 19
 
