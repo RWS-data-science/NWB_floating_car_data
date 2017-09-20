@@ -221,6 +221,8 @@ Vind voor alle punten op een NWB segment de dichtsbijzijnde punten van OSM. Kijk
 #GEBRUIK NU WEL EQUIDISTANTE SHAPES
 
 #zet alle punten van OSM in een dataframe
+OSM = basemap_select
+NWB = nwb_select
 
 points_OSM = pblapply(c(1:length(OSM@lines)), function(i){
   as.data.frame(OSM@lines[[i]]@Lines[[1]]@coords)
@@ -228,31 +230,21 @@ points_OSM = pblapply(c(1:length(OSM@lines)), function(i){
 points_OSM = rbindlist(points_OSM)
 points_OSM = points_OSM[!duplicated(points_OSM),]
 
-#zet alle punten van het NWB in een dataframe
-points_NWB = pblapply(c(1:length(NWB@lines)), function(i){
-  as.data.frame(NWB@lines[[i]]@Lines[[1]]@coords)
-})
-points_NWB = rbindlist(points_NWB)
-points_NWB = points_NWB[!duplicated(points_NWB),]
 
-
-
-#bereken de nearest neighbour afstand voor ieder punt in het nwb ten opzichten van de punten in het OSM
-
-NWB_to_OSM_points = pblapply(c(1:nrow(points_NWB)) , function(i){
+#loop door alle NWB lines heen en bereken de min, max en mean tot de points
+distance_matrix = pblapply(1:length(NWB@lines), function(i){
   
-
-    distances = sqrt( ( points_OSM[,1] - as.numeric(points_NWB[i,1])   )^2  +  (  points_OSM[,2] - as.numeric(points_NWB[i,2])   )^2 )
+  distances = lapply(1:nrow(NWB@lines[[i]]@Lines[[1]]@coords ), function(j){
+     sqrt(  rowSums( (points_OSM - NWB@lines[[i]]@Lines[[1]]@coords[j,])^2 ) ) 
     
-    
-    
+  })
+  distances = unlist(distances)
+  return( data.frame( 'ID' = NWB@lines[[i]]@ID  , 'max' =  max(distances), 'min' = min(distances) , 'mean' = mean(distances), 'median' =  median(distances)  ))
   
-  return( min(distances))
 })
 
-drempel = 30
+distance_matrix = rbindlist(distance_matrix)
 
-locaties_fouten = points_NWB[unlist(NWB_to_OSM_points) > drempel  ,] 
 
 ```
 
