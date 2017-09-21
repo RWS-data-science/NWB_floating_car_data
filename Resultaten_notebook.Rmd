@@ -34,6 +34,36 @@ basemap_select<- spTransform(basemap_select,rd)
 
 ```
 
+
+##Haal dubbele OSM lijnstukken weg
+
+```{r}
+source('remove_doubles.r')
+#maak een vector van IDs die de shape omscrijven terwijl alles maar 1 keer voorkomt
+IDs = remove_doubles(basemap_select) 
+
+i=1
+
+#gooi alle lines die niet in de lijst van IDs voorkomen weg
+while(i <= length(basemap_select@lines)){
+  
+  if(! (basemap_select@lines[[i]]@ID %in% IDs)){
+    basemap_select@lines[[i]] = NULL
+    basemap_select@data[i,] = NULL
+    i=i
+  }else{
+    i = i+1
+  }
+  
+}
+
+
+
+
+
+```
+
+
 ##Equidistant
 Beide bestanden bestaan uit Polyline shapes, maar de OSM basemap heeft een hogere resolutie het NWB (OSM segmenten zijn max 50 m. lang, NWB segmenten vaak langer). Met name bij langere en rechte NWB segmenten (weinig onderliggende punten in de polyline) levert dat problemen op bij het bepalen van de nearest neighbor. Om dat probleem te ondervangen zijn de NWB segmenten eerst kunstmatig opgeknipt in segmenten van max 50 m.
 

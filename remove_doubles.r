@@ -1,10 +1,12 @@
 
 
-OSM = basemap_select
-OSM@lines = OSM@lines[1:100]
+
+remove_doubles = function(OSM){
 
 
 OSM_no_doubles = list(OSM@lines[[1]]@Lines[[1]]@coords)
+IDs = list(OSM@lines[[1]]@ID)
+
 n=2
 for(i in 2:length(OSM@lines)){
   
@@ -25,6 +27,7 @@ for(i in 2:length(OSM@lines)){
   
   if(sum( unlist(dubbel))== 0){
   OSM_no_doubles[[n]] =  OSM@lines[[i]]@Lines[[1]]@coords
+  IDs[[n]] = OSM@lines[[i]]@ID
   n = n+1  
   }
    
@@ -32,6 +35,11 @@ for(i in 2:length(OSM@lines)){
     
   
   
+}
+
+IDs = unlist(IDs)
+
+return(IDs)
 }
 
 
