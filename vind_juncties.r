@@ -40,6 +40,8 @@ vind_juncties = function(shape){
   
   
   juncties = rbind(juncties1, juncties2)
+  
+  juncties = juncties[!duplicated(juncties), ]
  
   
   
