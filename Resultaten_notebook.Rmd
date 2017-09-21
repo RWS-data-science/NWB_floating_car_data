@@ -212,33 +212,46 @@ Vind de juncties en bepaal voor iedere junctie in OSM het dichtsbijzijnde juncti
 source('vind_juncties.r')
 
 
-
+#vind coordinaten van juncties in het OSM en het NWB
 OSM_juncties = vind_juncties(basemap_select)
 NWB_juncties = vind_juncties(nwb_select)
 
-dichtst_bijzijnde_NWB_junctie =  pblapply(c(1:nrow(OSM_juncties)), function(i){
- x =  sqrt ( (NWB_juncties[,1] - OSM_juncties[i,1])^2   +   (NWB_juncties[,2] - OSM_juncties[i,2])^2 )
- x = NWB_juncties[x == min(x),] 
- return(x[1,])
- 
-})
-
-dichtst_bijzijnde_NWB_junctie =  do.call(rbind, dichtst_bijzijnde_NWB_junctie)
-OSM_juncties = cbind(OSM_juncties, dichtst_bijzijnde_NWB_junctie )
-colnames(OSM_juncties) = c('x_OSM', 'y_OSM', 'x_NWB', 'y_NWB')
-
-
+#vind voor iedere NWB junctie de dichtsbijzijnde OSM junctie
 dichtst_bijzijnde_OSM_junctie =  pblapply(c(1:nrow(NWB_juncties)), function(i){
- x =  sqrt ( (OSM_juncties[,1] - NWB_juncties[i,1])^2   +   (OSM_juncties[,2] - NWB_juncties[i,2])^2 )
- x = OSM_juncties[x == min(x),] 
+ dist =  sqrt ( (OSM_juncties[,1] - NWB_juncties[i,1])^2   +   (OSM_juncties[,2] - NWB_juncties[i,2])^2 )
+ buren = OSM_juncties[dist == min(dist),]
+ x = data.frame('x' =  buren[1,1], 'lat' =  buren[1,2], 'dist' = min(dist))
  
- return(x[1,])
+ return(x)
  
 })
 
-dichtst_bijzijnde_OSM_junctie =  do.call(rbind, dichtst_bijzijnde_OSM_junctie)
-NWB_juncties = cbind(dichtst_bijzijnde_NWB_junctie , OSM_juncties )
-colnames(NWB_juncties) = c('x_NWB', 'y_NWB', 'x_OSM', 'y_OSM')
+#zet in een dataframe
+dichtst_bijzijnde_OSM_junctie =  rbindlist(dichtst_bijzijnde_OSM_junctie)
+juncties = cbind(NWB_juncties, dichtst_bijzijnde_OSM_junctie  )
+colnames(juncties) = c('x_NWB', 'y_NWB', 'x_OSM', 'y_OSM', 'dist')
+
+
+#vind de wegvak IDs erbij
+#Maak dataframe van alle punten in het NWB plus ID
+
+totaal = lapply(1:length(nwb_select@lines), function(i){
+output = as.data.frame(nwb_select@lines[[i]]@Lines[[1]]@coords)
+colnames(output) =c('x','y')
+output$id = nwb_select@data$WVK_ID[i]
+  return(output)
+})
+
+totaal = rbindlist(totaal)
+
+#zoek de IDs op van de juncties
+juncties$ID = -1
+
+for(i in 1:nrow(juncties)){
+  z = totaal$ID[  juncties$x_NWB[i] == totaal$x & juncties$y_NWB[i] == totaal$y  ]
+  juncties$ID[i] = z[1]
+}
+
 
 
 ```
