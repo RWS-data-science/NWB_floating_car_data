@@ -21,5 +21,3 @@ for (dag in dagen){
 
 
 
-parLapply(cl, 2:4,
-          merge_tables,dir,uur1,uur2)
