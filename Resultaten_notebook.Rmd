@@ -17,7 +17,7 @@ Team:
 Onderstaande code importeert alle benodigde libraries en functies en laadt vervolgens de gebruikte data. Er is een uitsnede gemaakt van het NWB Wegvakken bestand van 01-06-2017 rondom Gouda. Vervolgens is een zelfde uitsnede gemaakt voor de Basemap die verkregen is via BeMobile (gebaseerd op Open Street Map, OSM). De uitsnede is in eerste instantie gemaakt om de rekentijd kort te houden tijdens ontwikkelen/testen. Dat gebeurt in het script read_fcd.R. Later kunnen dezelfde scripts gebruikt worden voor om over heel Nederland verschillen te detecteren.
 
 ```{r, echo=F,cache=T,eval=F}
-source('lib.r')
+
 load("db/basemap_select.RData")
 load("db/nwb_select2.RData")
 ```
@@ -32,11 +32,12 @@ rd<- "+proj=sterea +lat_0=52.15616055555555 +lon_0=5.38763888888889 +k=0.999908 
 nwb_select<- spTransform(nwb_select,rd)
 basemap_select<- spTransform(basemap_select,rd)
 
+rm(rd)
 ```
 
 
 ##Haal dubbele OSM lijnstukken weg
-Blijkbaar komen in de OSM basemap veel dubbele wegsementen voor (exact dezelfde geometrie). Het heeft geen zin om deze subbel te checken, daarom verwijderen we ze hier.
+Blijkbaar komen in de OSM basemap veel dubbele wegsementen voor (exact dezelfde geometrie). Het heeft geen zin om deze dubbel te checken, daarom verwijderen we ze hier.
 ```{r}
 source('remove_doubles.r')
 #maak een vector van IDs die de shape omscrijven terwijl alles maar 1 keer voorkomt
@@ -48,8 +49,7 @@ i=1
 while(i <= length(basemap_select@lines)){
   
   if(! (basemap_select@lines[[i]]@ID %in% IDs)){
-     basemap_select<- basemap_select[-i,] # = NULL
-    #basemap_select@data[i,] = NULL
+     basemap_select<- basemap_select[-i,] 
     i=i
   }else{
     i = i+1
@@ -58,6 +58,8 @@ while(i <= length(basemap_select@lines)){
   
 }
 
+rm(IDs)
+rm(i)
 
 
 
@@ -96,8 +98,9 @@ for(i in 1:length(basemap_select_eq@lines)){
    colnames(x[[i]]) = c('x','y')
   basemap_select_eq@lines[[i]]@Lines[[1]]@coords = as.matrix(x[[i]])
 }
-
-
+rm(lengte)
+rm(x)
+rm(i)
 
 ```
 
@@ -110,64 +113,47 @@ We berekenen per OSM line en per NWB line de afstand van alle punten op de NWB l
 
 basemap_select_eq$segmentID<- as.integer(as.character(basemap_select_eq$segmentID))
 source('half_hausdorf.r')
-OSM = basemap_select_eq
-NWB = nwb_select_eq
 
-distance_lijst_OSM = pblapply(c(1:length(OSM@lines)), function(i){
+distance_lijst_OSM = pblapply(c(1:length(basemap_select_eq@lines)), function(i){
   
-  hausdorf_distances_to_NWB_lines =   lapply(c(1:length(NWB@lines)),function(j){
-    mean_dist(OSM@lines[[i]]@Lines[[1]]@coords, NWB@lines[[j]]@Lines[[1]]@coords  )
+  hausdorf_distances_to_NWB_lines =   lapply(c(1:length(nwb_select_eq@lines)),function(j){
+    mean_dist(basemap_select_eq@lines[[i]]@Lines[[1]]@coords, nwb_select_eq@lines[[j]]@Lines[[1]]@coords  )
   })
   
   
   minimum_distance_osm = min(unlist( hausdorf_distances_to_NWB_lines))
   label = which.min( unlist(hausdorf_distances_to_NWB_lines) )
   
-  return(c(OSM$segmentID[i],as.numeric(as.character(NWB$WVK_ID[label])), minimum_distance_osm))
+  return(c(basemap_select_eq$segmentID[i],as.numeric(as.character(nwb_select_eq$WVK_ID[label])), minimum_distance_osm))
 })
 
 #create df with nearest neighbors
-distance_matrix_OSM = as.data.frame(do.call(rbind, distance_lijst_OSM))[,c(1:3)]
-colnames(distance_matrix_OSM) = c('OSM_id', 'NWB_id', 'Half_Hausdorfdistance')
 
 #voor ieder stukje NWB, max, min, mean en median distance naar dichtsbijzijnde OSM punten.
-points_OSM = pblapply(c(1:length(OSM@lines)), function(i){
-  as.data.frame(OSM@lines[[i]]@Lines[[1]]@coords)
+points_OSM = pblapply(c(1:length(basemap_select_eq@lines)), function(i){
+  as.data.frame(basemap_select_eq@lines[[i]]@Lines[[1]]@coords)
 })
 points_OSM = rbindlist(points_OSM)
 points_OSM = points_OSM[!duplicated(points_OSM),]
 
 
 #loop door alle NWB lines heen en bereken de min, max en mean tot de points
-distance_matrix = pblapply(1:length(NWB@lines), function(i){
+distance_matrix_OSM_matching = pblapply(1:length(nwb_select_eq@lines), function(i){
   
-  distances = lapply(1:nrow(NWB@lines[[i]]@Lines[[1]]@coords ), function(j){
-     min(sqrt(  ( (points_OSM$x - NWB@lines[[i]]@Lines[[1]]@coords[j,1])^2 + (points_OSM$y - NWB@lines[[i]]@Lines[[1]]@coords[j,2])^2) ) )
+  distances = lapply(1:nrow(nwb_select_eq@lines[[i]]@Lines[[1]]@coords ), function(j){
+     min(sqrt(  ( (points_OSM$x - nwb_select_eq@lines[[i]]@Lines[[1]]@coords[j,1])^2 + (points_OSM$y - nwb_select_eq@lines[[i]]@Lines[[1]]@coords[j,2])^2) ) )
     
   })
   distances = unlist(distances)
-  return( data.frame( 'ID' = as.numeric(as.character(NWB@data$WVK_ID[i])), 'max' =  max(distances), 'min' = min(distances) , 'mean' = mean(distances), 'median' =  median(distances)  ))
+  return( data.frame( 'ID' = as.numeric(as.character(nwb_select_eq@data$WVK_ID[i])), 'max' =  max(distances), 'min' = min(distances) , 'mean' = mean(distances), 'median' =  median(distances)  ))
   
 })
 
-# distance_matrix = rbindlist(distance_matrix)
-# #distance_matrix <- do.call(rbind,distance_matrix)
-# 
-# distance_lijst_NWB = pblapply(c(1:length(NWB@lines)), function(i){
-#     hausdorf_distances_to_OSM_lines =   lapply(c(1:length(OSM@lines)),function(j){
-#     mean_dist(NWB@lines[[i]]@Lines[[1]]@coords, OSM@lines[[j]]@Lines[[1]]@coords  )
-#   })
-# 
-#   minimum_distance_nwb = min(unlist( hausdorf_distances_to_OSM_lines))
-#   label = which.min( unlist(hausdorf_distances_to_OSM_lines) )
-# 
-#   return(c(as.numeric(as.character(NWB$WVK_ID[i])),as.numeric(as.character(OSM$segmentID[label])), minimum_distance_nwb))
-# })
+distance_matrix_OSM_matching = rbindlist(distance_matrix_OSM_matching)
 
-# 
-# #create df with nearest neighbors
-# distance_matrix_NWB = as.data.frame(do.call(rbind, distance_lijst_NWB))[,c(1:3)]
-# colnames(distance_matrix_NWB) = c('NWB_id', 'OSM_id', 'Half_Hausdorfdistance')
+rm(points_OSM)
+rm(distance_lijst_OSM)
+
 
 ```
 
@@ -258,11 +244,14 @@ source('vind_juncties.r')
 OSM_juncties = vind_juncties(basemap_select)
 NWB_juncties = vind_juncties(nwb_select)
 
+
+
+
 #vind voor iedere NWB junctie de dichtsbijzijnde OSM junctie
 dichtst_bijzijnde_OSM_junctie =  pblapply(c(1:nrow(NWB_juncties)), function(i){
- dist =  sqrt ( (OSM_juncties[,1] - NWB_juncties[i,1])^2   +   (OSM_juncties[,2] - NWB_juncties[i,2])^2 )
+ dist =  sqrt ( (OSM_juncties[,1] - as.numeric(NWB_juncties[i,1])   )^2   +   (OSM_juncties[,2] - as.numeric(NWB_juncties[i,2])  )^2 )
  buren = OSM_juncties[dist == min(dist),]
- x = data.frame('x' =  buren[1,1], 'lat' =  buren[1,2], 'dist' = min(dist))
+ x = data.frame( 'x_osm' =  buren[1,1], 'y_osm' =  buren[1,2], 'id_osm' = buren[1,3], 'dist_osm' = min(dist))
  
  return(x)
  
@@ -271,28 +260,13 @@ dichtst_bijzijnde_OSM_junctie =  pblapply(c(1:nrow(NWB_juncties)), function(i){
 #zet in een dataframe
 dichtst_bijzijnde_OSM_junctie =  rbindlist(dichtst_bijzijnde_OSM_junctie)
 juncties = cbind(NWB_juncties, dichtst_bijzijnde_OSM_junctie  )
-colnames(juncties) = c('x_NWB', 'y_NWB', 'x_OSM', 'y_OSM', 'dist')
+colnames(juncties) = c('x_NWB', 'y_NWB', 'id_nwb', 'x_osm', 'y_OSM', 'id_osm', 'dist')
 
-
-#vind de wegvak IDs erbij
-#Maak dataframe van alle punten in het NWB plus ID
-
-totaal = lapply(1:length(nwb_select@lines), function(i){
-output = as.data.frame(nwb_select@lines[[i]]@Lines[[1]]@coords)
-colnames(output) =c('x','y')
-output$id = as.numeric(as.character(nwb_select@data$WVK_ID[i]))
-  return(output)
-})
-
-totaal = rbindlist(totaal)
-
-#zoek de IDs op van de juncties
-juncties$ID = -1
-
-for(i in 1:nrow(juncties)){
-  z = totaal$ID[  juncties$x_NWB[i] == totaal$x & juncties$y_NWB[i] == totaal$y  ]
-  juncties$ID[i] = z[1]
-}
+matrix_juncties = juncties
+rm(juncties)
+rm(dichtst_bijzijnde_OSM_junctie)
+rm(NWB_juncties)
+rm(OSM_juncties)
 
 
 
@@ -473,7 +447,7 @@ test2<- nwb_select[which(nwb_select$WVK_ID == 209298002),]
 test2@lines
 ```
 
-
+############################################DOEN WE NIET MEER#####################################################
 ##vind doodlopende wegen
 Er komen soms kleine onterechte aftakkingen voor in het NWB om die op te kunnen sporen vergelijken we expleciet de doodlopende wegen van het NWB met het OSM.
 
