@@ -256,7 +256,7 @@ for(i in 1:nrow(juncties)){
 
 ```
 
-##Vind afwijkende vormen doormiddeln van de hausdorf distance
+##Vind afwijkende vormen doormiddeln van afstand punten NWB tot punten OSM
 Vind voor alle punten op een NWB segment de dichtsbijzijnde punten van OSM. Kijk of het maximum en het gemiddelde niet tever afwijken.
 
 
