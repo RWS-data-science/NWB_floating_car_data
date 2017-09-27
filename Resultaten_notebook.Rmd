@@ -468,7 +468,7 @@ python.load("omrekenen.py")
   
   juncties = lapply( 1:nrow(matrix_juncties), function(i){
     
-   coords = data.frame('id' = matrix_juncties$id_nwb[i], 'dist' = matrix_juncties$dist )
+   coords = data.frame('id' = matrix_juncties$id_nwb[i], 'dist' = matrix_juncties$dist[i] )
      
      
     python.assign('coords', c( matrix_juncties$x_NWB[i], matrix_juncties$y_NWB[i] ) )
@@ -493,8 +493,8 @@ python.exec('wgsCoords = conv.fromRdToWgs( coords )')
 
 m = leaflet()
 m = addProviderTiles(m,providers$CartoDB)
-m = addCircleMarkers(m, lat = juncties$lat_nwb , lng = juncties$lon_nwb, color ='blue', popup =  juncties$dist )
-m = addCircleMarkers(m, lat = juncties$lat_osm , lng = juncties$lon_osm, color ='red', popup = juncties$dist )
+m = addCircleMarkers(m, lat = juncties$lat_nwb , lng = juncties$lon_nwb, color ='blue', popup = paste( '<h> dist:', juncties$dist , 'id:', juncties$id , '</h>' ) )
+m = addCircleMarkers(m, lat = juncties$lat_osm , lng = juncties$lon_osm, color ='red', popup = paste( '<h> dist:', juncties$dist , 'id:', juncties$id , '</h>' ) )
 
 print(m)
 
