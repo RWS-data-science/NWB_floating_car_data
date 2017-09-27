@@ -23,13 +23,14 @@ tabel= data.frame('SegmentID'=base_full$segmentID,'Coverage_totaal' = 0  ,'Speed
 
 
 for(i in 1:length(files)){
-a<-Sys.time()
+#a<-Sys.time()
   #lees de tijd van de nieuwe tabel
   tijd = as.numeric(strsplit(readLines(paste(dir , files[i], sep = '/'), n = 1), '[:;T]' )[[1]][[2]])
  
   
   if(tijd %in% uren){ #als de tijd tussen de ingegeven grenzen valt voeg dan de informatie toe
   
+    if (substr(files[i], nchar(files[i])-1, nchar(files[i])) == 'gz'){ #alleen .gz files
 tabel_nieuw = fread( paste('zcat <',paste(dir , files[i], sep = '/')) , sep = ';', skip = 1, header = TRUE)
 
 tabel_nieuw$aantal_keer = 1
@@ -53,8 +54,9 @@ tabel$SpeedKph = NULL
 tabel$LOS.Reference = NULL
 tabel$TraveltimeMS = NULL
 tabel$aantal_keer = NULL
-
-}#einde if
+    }
+  }#einde if
+  if (i %% 100==0  ){print(i/length(files))}
 #print(Sys.time()-a)
 }
 
@@ -62,7 +64,7 @@ tabel$aantal_keer = NULL
 tabel$SpeedKph = tabel$SpeedKph_totaal / tabel$aantal_keer_totaal
 
 #gooid segmentID van -1 weg
-tabel = tabel[ - which(tabel$SegmentID==-1),] 
+#tabel = tabel[ - which(tabel$SegmentID==-1),] 
 
 
 
