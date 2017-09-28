@@ -17,22 +17,91 @@ Team:
 ###################################BESTANDEN AGREGREREN##############################################
 
 
+
+
+##Floating car data aggregeren
+Dit stuk code leest alle tabellen van de floatin car data en maakt er een tabel van met 4 kolommen. Het wegsegment ID, de gemiddeld gereden snelheid, het aantal tabellen waarin het segement voorkomt en de cummulatieve intensiteit. Deze tabel word gemaakt voor 6-19 en 19-6 om rekening te houden met wisseling in maximum snelheid. NB dit gebeurt in het bestandje aggregeer_fcd.R
+
+```{r}
+
+#base_full=read.dbf("db/basemaps/13354-shapes/segments.dbf")
+
+source('merge_fcd.r')
+
+
+dagen<- c("01","02","03","04","05","06",
+  "07","08","09" ,"10")
+
+
+# for (dag in dagen){
+#   dir = paste0('db/06/',dag)
+#   uur1 = 9
+#   uur2 = 19
+# 
+#   tabel_overdag <- merge_tables(dir = dir,uur1 = uur1, uur2 = uur2)
+#   save(tabel_overdag,file=paste0('db/fcd_agg/',dag,'_dag.RData'))
+#   tabel_nacht =  merge_tables(dir = dir,uur1 = uur2, uur2 = uur1)
+#   save(tabel_nacht,file=paste0('db/fcd_agg/',dag,'_nacht.RData'))
+# }
+
+
+
+#aggregeer en match aan NWB
+dagen<- Sys.glob('db/fcd_agg/*dag.RData',dirmark = F)
+nachten<-  Sys.glob('db/fcd_agg/*nacht.RData',dirmark = F)
+
+dag<- rbindlist(lapply(dagen,function(d){load(d);return(tabel_overdag)}))
+nacht<- rbindlist(lapply(nachten,function(d){load(d);return(tabel_nacht)}))
+
+
+#aggregate
+dag_agg <- dag %>% group_by(SegmentID) %>%
+  summarise(
+  aantal = sum(aantal_keer_totaal,na.rm=TRUE),
+  v_mean = mean(SpeedKph, na.rm = TRUE),
+  v_max = max(SpeedKph, na.rm=TRUE))
+
+
+dag_agg$perc_coverage <- dag_agg$aantal/(10*11*60) #11 uur per dag, 10 dagen, 60 minuten/uur
+
+#remove segments with no traffic
+dag_agg<- dag_agg[which(dag_agg$aantal>0),]
+
+
+#aggregate snelheden 's nachts
+nacht_agg <- nacht %>% group_by(SegmentID) %>%
+  summarise(
+  aantal = sum(aantal_keer_totaal,na.rm=TRUE),
+  v_mean = mean(SpeedKph, na.rm = TRUE),
+  v_max = max(SpeedKph, na.rm=TRUE))
+  
+nacht_agg$perc_coverage <- nacht_agg$aantal/(10*13*60) #13 uur per nacht, 10 nachten, 60 minuten/uur
+
+#remove segments with no traffic
+nacht_agg<- nacht_agg[which(nacht_agg$aantal>0),]
+
+rm(dag);rm(nacht)
+
+```
+
 #######################################EIND BESTANDEN AGREGREREN##########################################
 
-
-
-
-
-#####################################PRE PROCESSING######################################################
-#Data laden en preprocessing
+##########################Data inladen en uitsnijden######################################################
+##Data laden en preprocessing
 Onderstaande code importeert alle benodigde libraries en functies en laadt vervolgens de gebruikte data. Er is een uitsnede gemaakt van het NWB Wegvakken bestand van 01-06-2017 rondom Gouda. Vervolgens is een zelfde uitsnede gemaakt voor de Basemap die verkregen is via BeMobile (gebaseerd op Open Street Map, OSM). De uitsnede is in eerste instantie gemaakt om de rekentijd kort te houden tijdens ontwikkelen/testen. Dat gebeurt in het script read_fcd.R. Later kunnen dezelfde scripts gebruikt worden voor om over heel Nederland verschillen te detecteren.
+
 
 ```{r, echo=F,cache=T,eval=F}
 source('lib.r')
 load("db/basemap_select.RData")
 load("db/nwb_select2.RData")
-```
 
+```
+Uitsnijden
+
+
+#####################################PRE PROCESSING######################################################
+#Preprocessing
 Om het NWB bestand te kunnen vergelijken zullen deze op elkaar gemapt moeten worden. Hiervoor is voor ieder ieder lijnsegment uit de OSM basemap gezocht naar een 'nearest neighbor' in het NWB. Met behulp van de afstand tot de nearest neighbor kunnen afwijkingen worden gedetecteerd. Voorbeeld: Objecten in de OSM basemap die geen nearest neighbor in het NWB hebben binnen een bepaalde marge kunnen duiden op missende/onjuiste informatie in het NWB. Andersom (NWB object zonder OSM nearest neighbor) duidt op een weg die wel in NWB bestaat, maar niet in de OSM basemap. Om de afstand te bepalen tussen een object in de OSM basemap en een object in NWB, is gebruik gemaakt van een afgeleide van de [Hausdorff distance](https://en.wikipedia.org/wiki/Hausdorff_distance). Hiervoor is eerst nog enige bewerking gedaan.
 
 
@@ -46,6 +115,16 @@ basemap_select<- spTransform(basemap_select,rd)
 rm(rd)
 ```
 
+Merge geaggregeerde snelheden
+
+```{r}
+nwb_select$v_mean_dag<- dag_agg$v_mean[match(nwb_select$nn_OSM,dag_agg$SegmentID)]
+nwb_select$dekking<- dag_agg$perc_coverage[match(nwb_select$nn_OSM,dag_agg$SegmentID)]
+
+basemap_select$v_mean_dag<- dag_agg$v_mean[match(basemap_select$segmentID,dag_agg$SegmentID)]
+basemap_select$dekking<- dag_agg$perc_coverage[match(basemap_select$segmentID,dag_agg$SegmentID)]
+
+```
 
 ##Haal dubbele OSM lijnstukken weg
 Blijkbaar komen in de OSM basemap veel dubbele wegsementen voor (exact dezelfde geometrie). Het heeft geen zin om deze dubbel te checken, daarom verwijderen we ze hier.
@@ -119,6 +198,38 @@ rm(i)
 
 #####################################################FEATURE ENGENEERING######################################################
 
+##Merge metadata
+Metadata uit OSM en NWB met elkaar vergelijken op basis van de beschikbare gegevens uit NWB, WEGGEG/WKD en de metadata uit de aangeleverde basemap (OSM).
+```{r}
+
+vmax_weggeg <- read.dbf("db/WEGGEG/01-06-2017/Maximum snelheid/max_snelheden.dbf")
+vmax_weggeg<- vmax_weggeg[!duplicated(vmax_weggeg$WVK_ID),] #remove segments with >1 max speed
+
+vmax_wkd<- read.csv("db/WKD/01-06-2017/Speed/Wegvakdeel N/MAX_SNELHEDEN.csv",sep="\t")
+#vmax_wkd2<- read.csv("db/WKD/01-06-2017/Speed/Wegvakdeel J/MAX_SNELHEDEN.csv",sep="\t")
+#vmax_wkd<- rbind(vmax_wkd,vmax_wkd2);rm(vmax_wkd2)
+vmax_wkd$OMSCHR<- as.numeric(gsub("\\D", "", vmax_wkd$HDE_SHT))
+vmax_wkd$WVK_ID<- vmax_wkd$WEGVAK_ID
+
+vmax_merged<- rbind(vmax_weggeg[,c('WVK_ID','OMSCHR')],vmax_wkd[,c('WVK_ID','OMSCHR')])
+
+
+
+nwb_select$vmax<- vmax_merged$OMSCHR[match(nwb_select$WVK_ID,vmax_merged$WVK_ID)]
+#nwb_select_wgs$vmax<- vmax_merged$OMSCHR[match(nwb_select_wgs$WVK_ID,vmax_merged$WVK_ID)]
+
+rm(vmax_merged);rm(vmax_wkd);rm(vmax_weggeg)
+#merge
+#basemap_select$nn_nwb_half<- distance_matrix_OSM$NWB_id[match(basemap_select$segmentID,distance_matrix_OSM$OSM_id)]
+#basemap_select$hh_dist<- distance_matrix_OSM$Half_Hausdorfdistance[match(basemap_select$segmentID,distance_matrix_OSM$OSM_id)]
+#basemap_select$ge50<- ifelse(basemap_select$hh_dist >=50, TRUE,FALSE)
+
+
+#nwb_select$is_nn50<- ifelse(nwb_select$WVK_ID %in% #basemap_select$nearest_nwb_line_id[basemap_select$afstand_nwb_lijn<50],FALSE,TRUE )
+# nwb_select$nn_OSM<- distance_matrix_OSM$OSM_id[match(nwb_select$WVK_ID,distance_matrix_OSM$NWB_id)]
+# nwb_select$hh_dist<- distance_matrix_OSM$Half_Hausdorfdistance[match(nwb_select$WVK_ID,distance_matrix_OSM$NWB_id)]
+
+```
 
 
 
@@ -259,6 +370,8 @@ rm(points_OSM)
 
 ```
 
+
+
 ########################################################EIND FEATURE ENGINEERING#################################################################
 
 
@@ -276,119 +389,10 @@ rm(points_OSM)
 
 
 
-##Merge metadata
-Metadata uit OSM en NWB met elkaar vergelijken op basis van de beschikbare gegevens uit NWB, WEGGEG/WKD en de metadata uit de aangeleverde basemap (OSM).
+
+
+##Visualisatie snelheden
 ```{r}
-
-vmax_weggeg <- read.dbf("db/WEGGEG/01-06-2017/Maximum snelheid/max_snelheden.dbf")
-vmax_weggeg<- vmax_weggeg[!duplicated(vmax_weggeg$WVK_ID),] #remove segments with >1 max speed
-
-vmax_wkd<- read.csv("db/WKD/01-06-2017/Speed/Wegvakdeel N/MAX_SNELHEDEN.csv",sep="\t")
-#vmax_wkd2<- read.csv("db/WKD/01-06-2017/Speed/Wegvakdeel J/MAX_SNELHEDEN.csv",sep="\t")
-#vmax_wkd<- rbind(vmax_wkd,vmax_wkd2);rm(vmax_wkd2)
-vmax_wkd$OMSCHR<- as.numeric(gsub("\\D", "", vmax_wkd$HDE_SHT))
-vmax_wkd$WVK_ID<- vmax_wkd$WEGVAK_ID
-
-vmax_merged<- rbind(vmax_weggeg[,c('WVK_ID','OMSCHR')],vmax_wkd[,c('WVK_ID','OMSCHR')])
-
-
-
-nwb_select$vmax<- vmax_merged$OMSCHR[match(nwb_select$WVK_ID,vmax_merged$WVK_ID)]
-#nwb_select_wgs$vmax<- vmax_merged$OMSCHR[match(nwb_select_wgs$WVK_ID,vmax_merged$WVK_ID)]
-
-rm(vmax_merged);rm(vmax_wkd);rm(vmax_weggeg)
-#merge
-#basemap_select$nn_nwb_half<- distance_matrix_OSM$NWB_id[match(basemap_select$segmentID,distance_matrix_OSM$OSM_id)]
-#basemap_select$hh_dist<- distance_matrix_OSM$Half_Hausdorfdistance[match(basemap_select$segmentID,distance_matrix_OSM$OSM_id)]
-#basemap_select$ge50<- ifelse(basemap_select$hh_dist >=50, TRUE,FALSE)
-
-
-#nwb_select$is_nn50<- ifelse(nwb_select$WVK_ID %in% #basemap_select$nearest_nwb_line_id[basemap_select$afstand_nwb_lijn<50],FALSE,TRUE )
-# nwb_select$nn_OSM<- distance_matrix_OSM$OSM_id[match(nwb_select$WVK_ID,distance_matrix_OSM$NWB_id)]
-# nwb_select$hh_dist<- distance_matrix_OSM$Half_Hausdorfdistance[match(nwb_select$WVK_ID,distance_matrix_OSM$NWB_id)]
-
-```
-
-
-##Floating car data samenvoegen
-Dit stuk code leest alle tabellen van de floatin car data en maakt er een tabel van met 4 kolommen. Het wegsegment ID, de gemiddeld gereden snelheid, het aantal tabellen waarin het segement voorkomt en de cummulatieve intensiteit. Deze tabel word gemaakt voor 6-19 en 19-6 om rekening te houden met wisseling in maximum snelheid. NB dit gebeurt in het bestandje aggregeer_fcd.R
-
-```{r}
-
-#base_full=read.dbf("db/basemaps/13354-shapes/segments.dbf")
-
-source('merge_fcd.r')
-
-
-dagen<- c("01","02","03","04","05","06",
-  "07","08","09" ,"10")
-
-
-# for (dag in dagen){
-#   dir = paste0('db/06/',dag)
-#   uur1 = 9
-#   uur2 = 19
-# 
-#   tabel_overdag <- merge_tables(dir = dir,uur1 = uur1, uur2 = uur2)
-#   save(tabel_overdag,file=paste0('db/fcd_agg/',dag,'_dag.RData'))
-#   tabel_nacht =  merge_tables(dir = dir,uur1 = uur2, uur2 = uur1)
-#   save(tabel_nacht,file=paste0('db/fcd_agg/',dag,'_nacht.RData'))
-# }
-
-
-
-#aggregeer en match aan NWB
-dagen<- Sys.glob('db/fcd_agg/*dag.RData',dirmark = F)
-nachten<-  Sys.glob('db/fcd_agg/*nacht.RData',dirmark = F)
-
-dag<- rbindlist(lapply(dagen,function(d){load(d);return(tabel_overdag)}))
-nacht<- rbindlist(lapply(nachten,function(d){load(d);return(tabel_nacht)}))
-
-
-#aggregate
-dag_agg <- dag %>% group_by(SegmentID) %>%
-  summarise(
-  aantal = sum(aantal_keer_totaal,na.rm=TRUE),
-  v_mean = mean(SpeedKph, na.rm = TRUE),
-  v_max = max(SpeedKph, na.rm=TRUE))
-
-
-dag_agg$perc_coverage <- dag_agg$aantal/(10*11*60) #11 uur per dag, 10 dagen, 60 minuten/uur
-
-#remove segments with no traffic
-dag_agg<- dag_agg[which(dag_agg$aantal>0),]
-
-
-#aggregate snelheden 's nachts
-nacht_agg <- nacht %>% group_by(SegmentID) %>%
-  summarise(
-  aantal = sum(aantal_keer_totaal,na.rm=TRUE),
-  v_mean = mean(SpeedKph, na.rm = TRUE),
-  v_max = max(SpeedKph, na.rm=TRUE))
-  
-nacht_agg$perc_coverage <- nacht_agg$aantal/(10*13*60) #13 uur per nacht, 10 nachten, 60 minuten/uur
-
-#remove segments with no traffic
-nacht_agg<- nacht_agg[which(nacht_agg$aantal>0),]
-
-rm(dag);rm(nacht)
-
-```
-
-Voeg samen en visualiseer
-
-```{r}
-nwb_select$v_mean_dag<- dag_agg$v_mean[match(nwb_select$nn_OSM,dag_agg$SegmentID)]
-nwb_select$dekking<- dag_agg$perc_coverage[match(nwb_select$nn_OSM,dag_agg$SegmentID)]
-
-#nwb_select_wgs$v_mean_dag<- dag_agg$v_mean[match(nwb_select_wgs$nn_OSM,dag_agg$SegmentID)]
-#nwb_select_wgs$dekking<- dag_agg$perc_coverage[match(nwb_select_wgs$nn_OSM,dag_agg$SegmentID)]
-
-basemap_select$v_mean_dag<- dag_agg$v_mean[match(basemap_select$segmentID,dag_agg$SegmentID)]
-basemap_select$dekking<- dag_agg$perc_coverage[match(basemap_select$segmentID,dag_agg$SegmentID)]
-
-#basemap_select_wgs$v_mean_dag<- dag_agg$v_mean[match(basemap_select_wgs$segmentID,dag_agg$SegmentID)]
-#basemap_select_wgs$dekking<- dag_agg$perc_coverage[match(basemap_select_wgs$segmentID,dag_agg$SegmentID)]
 
 wgs<- "+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0"
 
@@ -400,47 +404,36 @@ basemap_select_wgs$dekking_scale<- 0.2+(basemap_select_wgs$dekking*0.8)/(1-0.2) 
 
 basemap_select_wgs$ge50<- ifelse(basemap_select$afstand_nwb_lijn >=50, TRUE,FALSE)
 
-factpal <- colorFactor(c("green","black"), c(TRUE,FALSE))
-factpal_nwb <- colorFactor(c("blue","red"), c(TRUE,FALSE))
+colpal<- colorNumeric('Spectral',domain = nwb_select_wgs$v_diff)
+#previewColors(colorNumeric('YlOrRd',domain = nwb_select_wgs$v_diff),c(0:100))
+
+#####
+
 
 ##leaflet
 leaflet() %>% addProviderTiles(providers$CartoDB)  %>% 
-  addPolylines(data=nwb_select_wgs,opacity=0.4,col=~factpal_nwb(is_nn50),
+  addPolylines(data=nwb_select_wgs,opacity=0.5,col=~colpal(v_diff),
                popup=~paste("WVK_ID: ",WVK_ID,"<br>",
-                            "dist: ", mean_afstand_osm),
+                            "vmax: ", vmax,'<br>',
+                            "v_mean_fcd_dag: ", v_mean_dag,'<br>',
+                            "dekking: ",dekking,'<br>',
+                            "nn_OSM_ID: ",nn_OSM),
                group="NWB",highlightOptions=highlightOptions(fillOpacity = 1,
-                              bringToFront = TRUE) ) %>% 
-  addPolylines(data=basemap_select_wgs,weight = 8,opacity=~dekking_scale,col=~factpal(ge50),group="OSM",
+                                                              bringToFront = TRUE) ) %>%
+
+  addPolylines(data=basemap_select_wgs[which(basemap_select_wgs$segmentID == 2005584),],weight = 8,opacity=~dekking_scale,col=~factpal(ge50),group="OSM",
                popup= ~paste("SegmentID:",segmentID, "<br>",
-                             "nn_nwb: ",nearest_nwb_line_id, "<br>",
-                             "half_hausdorff: ",afstand_nwb_lijn ,"<br>",
+                             "nn_nwb: ",nn_nwb_half, "<br>",
+                             "half_hausdorff: ", hh_dist,"<br>",
                              "dekking: ",dekking),highlightOptions=highlightOptions(fillOpacity = 1,
-                              bringToFront = TRUE)) %>%
+                                                                                    bringToFront = TRUE)) %>%
   # Layers control
   addLayersControl(
     overlayGroups = c("NWB", "OSM"),
-    options = layersControlOptions(collapsed = FALSE)) %>%
-
-    addLegend("bottomright", colors = c("chartreuse","black","blue","red"), labels = c("Wel in OSM, ook in NWB","Wel in OSM, niet NWB",
-                                                                                  "Wel in NWB, ook in OSM","Wel in NWB, niet in OSM"),
-    title = "Legend",
-    opacity = 0.7)
-  
+    options = layersControlOptions(collapsed = FALSE)) 
 
 
 ```
-
-Check equidistante shapes
-```{r}
-test<- nwb_select_eq[which(nwb_select_eq$WVK_ID == 209298002),]
-test@lines
-
-test2<- nwb_select[which(nwb_select$WVK_ID == 209298002),]
-test2@lines
-```
-
-
-
 
 
 
