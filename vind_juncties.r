@@ -1,9 +1,13 @@
 
 
-vind_juncties = function(shape){
+vind_juncties = function(shape, osm){
   
   
-  #vind midden
+  #vind midden OSM
+
+  if(osm == TRUE){
+  
+  
   
   midden = lapply( 1:length(shape@lines), function(i){
     
@@ -19,6 +23,34 @@ vind_juncties = function(shape){
     
   })
   
+  }
+  
+  #vind midden NWB
+  if(osm == FALSE){
+    
+    midden = lapply( 1:length(shape@lines), function(i){
+      
+      nieuw = data.frame( 'x' = shape@lines[[i]]@Lines[[1]]@coords[,1], 'y' = shape@lines[[i]]@Lines[[1]]@coords[,2], 'ID' = as.numeric( as.character(shape@data$WVK_ID[i])) )
+      
+      nieuw = nieuw[-c(1,nrow(nieuw )),]
+      
+      if(nrow(nieuw) > 0){
+        return(nieuw)
+      }else{
+        return(NULL)
+      }
+      
+    })
+    
+  }
+  
+  
+  ################
+  
+  
+  
+  
+  
  midden =  Filter(Negate(is.null), midden)
   midden = rbindlist(midden)
   
@@ -27,15 +59,32 @@ vind_juncties = function(shape){
   
   
   
-  #vind rand
+  #vind rand OSM
   
+  if(osm == TRUE){
   rand = lapply( 1:length(shape@lines), function(i){
     
      data.frame( 'x' = c( shape@lines[[i]]@Lines[[1]]@coords[1,1] ,   shape@lines[[i]]@Lines[[1]]@coords[nrow(shape@lines[[i]]@Lines[[1]]@coords),1]   )        , 'y' =  c( shape@lines[[i]]@Lines[[1]]@coords[1,2] ,   shape@lines[[i]]@Lines[[1]]@coords[nrow(shape@lines[[i]]@Lines[[1]]@coords),2 ]   ) , 'ID' = shape@lines[[i]]@ID )
     
     
   })
+  }
+  ################
   
+  #vind rand NWB
+  if(osm == FALSE){
+  rand = lapply( 1:length(shape@lines), function(i){
+    
+    data.frame( 'x' = c( shape@lines[[i]]@Lines[[1]]@coords[1,1] ,   shape@lines[[i]]@Lines[[1]]@coords[nrow(shape@lines[[i]]@Lines[[1]]@coords),1]   )        , 'y' =  c( shape@lines[[i]]@Lines[[1]]@coords[1,2] ,   shape@lines[[i]]@Lines[[1]]@coords[nrow(shape@lines[[i]]@Lines[[1]]@coords),2 ]   ) ,   'ID' = as.numeric( as.character(shape@data$WVK_ID[i]))  )
+    
+    
+  })
+  }
+  
+
+  
+  
+  ###############
   
   rand = rbindlist(rand)
   

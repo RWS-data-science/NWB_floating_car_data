@@ -104,6 +104,9 @@ rm(i)
 
 ```
 
+
+
+
 ##MATCH lines door middel van mean distance
 We berekenen per OSM line en per NWB line de afstand van alle punten op de NWB line tot alle punten of de OSM line. Vervolgens nemen we voor ieder OSM punt de minimale afstand tot de punten op de NWB line. Van deze afstanden nemen we het maximum. Dit noemen we de half-hausdorf afstand tussen de twee lines. Voor idere OSM line matchen we de NWB line met de kleinste half-hausdorf afstand.
 
@@ -145,7 +148,7 @@ distance_matrix_OSM_matching = pblapply(1:length(nwb_select_eq@lines), function(
     
   })
   distances = unlist(distances)
-  return( data.frame( 'ID' = as.numeric(as.character(nwb_select_eq@data$WVK_ID[i])), 'max' =  max(distances), 'min' = min(distances) , 'mean' = mean(distances), 'median' =  median(distances)  ))
+  return( data.frame( 'WVK_ID' = as.numeric(as.character(nwb_select_eq@data$WVK_ID[i])), 'max' =  max(distances), 'min' = min(distances) , 'mean' = mean(distances), 'median' =  median(distances)  ))
   
 })
 
@@ -153,6 +156,8 @@ distance_matrix_OSM_matching = rbindlist(distance_matrix_OSM_matching)
 
 rm(points_OSM)
 rm(distance_lijst_OSM)
+
+
 
 
 ```
@@ -174,8 +179,8 @@ source('vind_juncties.r')
 
 
 
-OSM_juncties = vind_juncties(basemap_select)
-NWB_juncties = vind_juncties(nwb_select)
+OSM_juncties = vind_juncties(basemap_select, osm = TRUE)
+NWB_juncties = vind_juncties(nwb_select, osm = FALSE)
 
 
 
@@ -193,7 +198,7 @@ dichtst_bijzijnde_OSM_junctie =  pblapply(c(1:nrow(NWB_juncties)), function(i){
 #zet in een dataframe
 dichtst_bijzijnde_OSM_junctie =  rbindlist(dichtst_bijzijnde_OSM_junctie)
 juncties = cbind(NWB_juncties, dichtst_bijzijnde_OSM_junctie  )
-colnames(juncties) = c('x_NWB', 'y_NWB', 'id_nwb', 'x_osm', 'y_OSM', 'id_osm', 'dist')
+colnames(juncties) = c('x_NWB', 'y_NWB', 'WVK_ID', 'x_osm', 'y_OSM', 'id_osm', 'dist')
 
 matrix_juncties = juncties
 rm(juncties)
@@ -201,7 +206,9 @@ rm(dichtst_bijzijnde_OSM_junctie)
 rm(NWB_juncties)
 rm(OSM_juncties)
 
-
+nwb_select@data$'afstand_osm_splitsing' <- matrix_juncties$dist[match(nwb_select@data$WVK_ID , matrix_juncties$WVK_ID)]
+rm(juncties)
+rm(matrix_juncties)
 
 ```
 
@@ -231,15 +238,24 @@ distance_matrix = pblapply(1:length(NWB@lines), function(i){
     
   })
   distances = unlist(distances)
-  return( data.frame( 'ID' = as.numeric(as.character(NWB@data$WVK_ID[i])), 'max' =  max(distances), 'min' = min(distances) , 'mean' = mean(distances), 'median' =  median(distances)  ))
+  return( data.frame( 'WVK_ID' = as.numeric(as.character(NWB@data$WVK_ID[i])), 'max' =  max(distances), 'min' = min(distances) , 'mean' = mean(distances), 'median' =  median(distances)  ))
   
 })
 
 distance_matrix = rbindlist(distance_matrix)
-#distance_matrix <- do.call(rbind,distance_matrix)
 
+
+
+nwb_select@data$'max_afstand_osm' <- distance_matrix$max[match(nwb_select$WVK_ID,distance_matrix$WVK_ID)]
+nwb_select@data$'min_afstand_osm' <- distance_matrix$min[match(nwb_select$WVK_ID,distance_matrix$WVK_ID)]
+nwb_select@data$'mean_afstand_osm' <- distance_matrix$mean[match(nwb_select$WVK_ID,distance_matrix$WVK_ID)]
+nwb_select@data$'median_afstand_osm' <- distance_matrix$median[match(nwb_select$WVK_ID,distance_matrix$WVK_ID)]
+
+rm(distance_matrix_OSM_matching)
 
 ```
+
+
 
 
 ##Merge metadata
@@ -456,7 +472,7 @@ leaflet() %>% addProviderTiles(providers$CartoDB)  %>%
     opacity = 0.7)
   
 
-
+#######################################3
 #visualiseer juncties
 
 
