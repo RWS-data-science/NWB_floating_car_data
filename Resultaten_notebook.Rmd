@@ -28,7 +28,7 @@ Team:
 Onderstaande code importeert alle benodigde libraries en functies en laadt vervolgens de gebruikte data. Er is een uitsnede gemaakt van het NWB Wegvakken bestand van 01-06-2017 rondom Gouda. Vervolgens is een zelfde uitsnede gemaakt voor de Basemap die verkregen is via BeMobile (gebaseerd op Open Street Map, OSM). De uitsnede is in eerste instantie gemaakt om de rekentijd kort te houden tijdens ontwikkelen/testen. Dat gebeurt in het script read_fcd.R. Later kunnen dezelfde scripts gebruikt worden voor om over heel Nederland verschillen te detecteren.
 
 ```{r, echo=F,cache=T,eval=F}
-
+source('lib.r')
 load("db/basemap_select.RData")
 load("db/nwb_select2.RData")
 ```
@@ -147,10 +147,16 @@ distance_lijst_OSM = pblapply(c(1:length(basemap_select_eq@lines)), function(i){
 })
 
 
+
 distance_lijst_OSM = rbindlist(distance_lijst_OSM)
 
 basemap_select@data$'afstand_nwb_lijn' <- distance_lijst_OSM$dist[match(basemap_select@data$segmentID , distance_lijst_OSM$OSM_ID)]
 basemap_select@data$'nearest_nwb_line_id' <- distance_lijst_OSM$WVK_ID[match(basemap_select@data$segmentID , distance_lijst_OSM$OSM_ID)]
+
+nwb_select$is_nn50<- ifelse(nwb_select$WVK_ID %in% basemap_select$nearest_nwb_line_id[basemap_select$afstand_nwb_lijn<50],FALSE,TRUE )
+nwb_select$nn_OSM<- distance_lijst_OSM$OSM_ID[match(nwb_select$WVK_ID,distance_lijst_OSM$WVK_ID)]
+nwb_select$nn_distance<- distance_lijst_OSM$Half_Hausdorfdistance[match(nwb_select$WVK_ID,distance_lijst_OSM$WVK_ID)]
+
 
 rm(distance_lijst_OSM)
 
@@ -207,7 +213,7 @@ rm(matrix_juncties)
 
 ```
 
-##Afwijking NWB lijn tot basmap shape
+##Afwijking NWB lijn tot basemap shape
 Vind voor alle punten op een NWB segment de dichtsbijzijnde punten van OSM. Kijk of het maximum en het gemiddelde niet tever afwijken.
 
 
@@ -273,6 +279,7 @@ rm(points_OSM)
 ##Merge metadata
 Metadata uit OSM en NWB met elkaar vergelijken op basis van de beschikbare gegevens uit NWB, WEGGEG/WKD en de metadata uit de aangeleverde basemap (OSM).
 ```{r}
+
 vmax_weggeg <- read.dbf("db/WEGGEG/01-06-2017/Maximum snelheid/max_snelheden.dbf")
 vmax_weggeg<- vmax_weggeg[!duplicated(vmax_weggeg$WVK_ID),] #remove segments with >1 max speed
 
@@ -286,8 +293,20 @@ vmax_merged<- rbind(vmax_weggeg[,c('WVK_ID','OMSCHR')],vmax_wkd[,c('WVK_ID','OMS
 
 
 
-nwb_select$vmax<- vmax_weggeg$OMSCHR[match(nwb_select$WVK_ID,vmax_merged$WVK_ID)]
-nwb_select_wgs$vmax<- vmax_weggeg$OMSCHR[match(nwb_select_wgs$WVK_ID,vmax_merged$WVK_ID)]
+nwb_select$vmax<- vmax_merged$OMSCHR[match(nwb_select$WVK_ID,vmax_merged$WVK_ID)]
+#nwb_select_wgs$vmax<- vmax_merged$OMSCHR[match(nwb_select_wgs$WVK_ID,vmax_merged$WVK_ID)]
+
+rm(vmax_merged);rm(vmax_wkd);rm(vmax_weggeg)
+#merge
+#basemap_select$nn_nwb_half<- distance_matrix_OSM$NWB_id[match(basemap_select$segmentID,distance_matrix_OSM$OSM_id)]
+#basemap_select$hh_dist<- distance_matrix_OSM$Half_Hausdorfdistance[match(basemap_select$segmentID,distance_matrix_OSM$OSM_id)]
+#basemap_select$ge50<- ifelse(basemap_select$hh_dist >=50, TRUE,FALSE)
+
+
+#nwb_select$is_nn50<- ifelse(nwb_select$WVK_ID %in% #basemap_select$nearest_nwb_line_id[basemap_select$afstand_nwb_lijn<50],FALSE,TRUE )
+# nwb_select$nn_OSM<- distance_matrix_OSM$OSM_id[match(nwb_select$WVK_ID,distance_matrix_OSM$NWB_id)]
+# nwb_select$hh_dist<- distance_matrix_OSM$Half_Hausdorfdistance[match(nwb_select$WVK_ID,distance_matrix_OSM$NWB_id)]
+
 ```
 
 
@@ -352,6 +371,8 @@ nacht_agg$perc_coverage <- nacht_agg$aantal/(10*13*60) #13 uur per nacht, 10 nac
 #remove segments with no traffic
 nacht_agg<- nacht_agg[which(nacht_agg$aantal>0),]
 
+rm(dag);rm(nacht)
+
 ```
 
 Voeg samen en visualiseer
@@ -360,29 +381,39 @@ Voeg samen en visualiseer
 nwb_select$v_mean_dag<- dag_agg$v_mean[match(nwb_select$nn_OSM,dag_agg$SegmentID)]
 nwb_select$dekking<- dag_agg$perc_coverage[match(nwb_select$nn_OSM,dag_agg$SegmentID)]
 
-nwb_select_wgs$v_mean_dag<- dag_agg$v_mean[match(nwb_select_wgs$nn_OSM,dag_agg$SegmentID)]
-nwb_select_wgs$dekking<- dag_agg$perc_coverage[match(nwb_select_wgs$nn_OSM,dag_agg$SegmentID)]
+#nwb_select_wgs$v_mean_dag<- dag_agg$v_mean[match(nwb_select_wgs$nn_OSM,dag_agg$SegmentID)]
+#nwb_select_wgs$dekking<- dag_agg$perc_coverage[match(nwb_select_wgs$nn_OSM,dag_agg$SegmentID)]
 
 basemap_select$v_mean_dag<- dag_agg$v_mean[match(basemap_select$segmentID,dag_agg$SegmentID)]
 basemap_select$dekking<- dag_agg$perc_coverage[match(basemap_select$segmentID,dag_agg$SegmentID)]
 
-basemap_select_wgs$v_mean_dag<- dag_agg$v_mean[match(basemap_select_wgs$segmentID,dag_agg$SegmentID)]
-basemap_select_wgs$dekking<- dag_agg$perc_coverage[match(basemap_select_wgs$segmentID,dag_agg$SegmentID)]
+#basemap_select_wgs$v_mean_dag<- dag_agg$v_mean[match(basemap_select_wgs$segmentID,dag_agg$SegmentID)]
+#basemap_select_wgs$dekking<- dag_agg$perc_coverage[match(basemap_select_wgs$segmentID,dag_agg$SegmentID)]
+
+wgs<- "+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0"
+
+basemap_select_wgs<- spTransform(basemap_select,wgs)
+nwb_select_wgs<- spTransform(nwb_select,wgs)
+  
 basemap_select_wgs$dekking<- ifelse(is.na(basemap_select_wgs$dekking),0, basemap_select_wgs$dekking)
 basemap_select_wgs$dekking_scale<- 0.2+(basemap_select_wgs$dekking*0.8)/(1-0.2) #scale between 0.2 and 1
 
-  
+basemap_select_wgs$ge50<- ifelse(basemap_select$afstand_nwb_lijn >=50, TRUE,FALSE)
+
+factpal <- colorFactor(c("green","black"), c(TRUE,FALSE))
+factpal_nwb <- colorFactor(c("blue","red"), c(TRUE,FALSE))
+
 ##leaflet
 leaflet() %>% addProviderTiles(providers$CartoDB)  %>% 
   addPolylines(data=nwb_select_wgs,opacity=0.4,col=~factpal_nwb(is_nn50),
                popup=~paste("WVK_ID: ",WVK_ID,"<br>",
-                            "dist: ", hh_dist),
+                            "dist: ", mean_afstand_osm),
                group="NWB",highlightOptions=highlightOptions(fillOpacity = 1,
                               bringToFront = TRUE) ) %>% 
   addPolylines(data=basemap_select_wgs,weight = 8,opacity=~dekking_scale,col=~factpal(ge50),group="OSM",
                popup= ~paste("SegmentID:",segmentID, "<br>",
-                             "nn_nwb: ",nn_nwb_half, "<br>",
-                             "half_hausdorff: ", hh_dist,"<br>",
+                             "nn_nwb: ",nearest_nwb_line_id, "<br>",
+                             "half_hausdorff: ",afstand_nwb_lijn ,"<br>",
                              "dekking: ",dekking),highlightOptions=highlightOptions(fillOpacity = 1,
                               bringToFront = TRUE)) %>%
   # Layers control
