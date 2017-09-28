@@ -13,6 +13,17 @@ Team:
 [Vikash Rambaran](vikash.rambaran@rws.nl) - Product Owner  
 
 
+
+###################################BESTANDEN AGREGREREN##############################################
+
+
+#######################################EIND BESTANDEN AGREGREREN##########################################
+
+
+
+
+
+#####################################PRE PROCESSING######################################################
 #Data laden en preprocessing
 Onderstaande code importeert alle benodigde libraries en functies en laadt vervolgens de gebruikte data. Er is een uitsnede gemaakt van het NWB Wegvakken bestand van 01-06-2017 rondom Gouda. Vervolgens is een zelfde uitsnede gemaakt voor de Basemap die verkregen is via BeMobile (gebaseerd op Open Street Map, OSM). De uitsnede is in eerste instantie gemaakt om de rekentijd kort te houden tijdens ontwikkelen/testen. Dat gebeurt in het script read_fcd.R. Later kunnen dezelfde scripts gebruikt worden voor om over heel Nederland verschillen te detecteren.
 
@@ -104,10 +115,15 @@ rm(i)
 
 ```
 
+#################################################EIND PREPROCESSING#############################################
+
+#####################################################FEATURE ENGENEERING######################################################
 
 
 
-##MATCH lines door middel van mean distance
+
+
+##MATCHING OSM segmenten aan NWB segmenten
 We berekenen per OSM line en per NWB line de afstand van alle punten op de NWB line tot alle punten of de OSM line. Vervolgens nemen we voor ieder OSM punt de minimale afstand tot de punten op de NWB line. Van deze afstanden nemen we het maximum. Dit noemen we de half-hausdorf afstand tussen de twee lines. Voor idere OSM line matchen we de NWB line met de kleinste half-hausdorf afstand.
 
  
@@ -127,37 +143,16 @@ distance_lijst_OSM = pblapply(c(1:length(basemap_select_eq@lines)), function(i){
   minimum_distance_osm = min(unlist( hausdorf_distances_to_NWB_lines))
   label = which.min( unlist(hausdorf_distances_to_NWB_lines) )
   
-  return(c(basemap_select_eq$segmentID[i],as.numeric(as.character(nwb_select_eq$WVK_ID[label])), minimum_distance_osm))
+  return( data.frame( 'OSM_ID'=  as.integer(basemap_select_eq$segmentID[i]), 'WVK_ID'=  as.integer(as.numeric(as.character(nwb_select_eq$WVK_ID[label]))), 'dist' = minimum_distance_osm))
 })
 
-#create df with nearest neighbors
 
-#voor ieder stukje NWB, max, min, mean en median distance naar dichtsbijzijnde OSM punten.
-points_OSM = pblapply(c(1:length(basemap_select_eq@lines)), function(i){
-  as.data.frame(basemap_select_eq@lines[[i]]@Lines[[1]]@coords)
-})
-points_OSM = rbindlist(points_OSM)
-points_OSM = points_OSM[!duplicated(points_OSM),]
+distance_lijst_OSM = rbindlist(distance_lijst_OSM)
 
+basemap_select@data$'afstand_nwb_lijn' <- distance_lijst_OSM$dist[match(basemap_select@data$segmentID , distance_lijst_OSM$OSM_ID)]
+basemap_select@data$'nearest_nwb_line_id' <- distance_lijst_OSM$WVK_ID[match(basemap_select@data$segmentID , distance_lijst_OSM$OSM_ID)]
 
-#loop door alle NWB lines heen en bereken de min, max en mean tot de points
-distance_matrix_OSM_matching = pblapply(1:length(nwb_select_eq@lines), function(i){
-  
-  distances = lapply(1:nrow(nwb_select_eq@lines[[i]]@Lines[[1]]@coords ), function(j){
-     min(sqrt(  ( (points_OSM$x - nwb_select_eq@lines[[i]]@Lines[[1]]@coords[j,1])^2 + (points_OSM$y - nwb_select_eq@lines[[i]]@Lines[[1]]@coords[j,2])^2) ) )
-    
-  })
-  distances = unlist(distances)
-  return( data.frame( 'WVK_ID' = as.numeric(as.character(nwb_select_eq@data$WVK_ID[i])), 'max' =  max(distances), 'min' = min(distances) , 'mean' = mean(distances), 'median' =  median(distances)  ))
-  
-})
-
-distance_matrix_OSM_matching = rbindlist(distance_matrix_OSM_matching)
-
-rm(points_OSM)
 rm(distance_lijst_OSM)
-
-
 
 
 ```
@@ -165,7 +160,7 @@ rm(distance_lijst_OSM)
 
 
 
-##Juncties van OSM en NWB vergelijken
+##afstanden juncties NWB tot juncties OSM
 Vind de juncties en bepaal voor iedere junctie in OSM het dichtsbijzijnde junctie in NWB en andersom
 
 
@@ -212,7 +207,7 @@ rm(matrix_juncties)
 
 ```
 
-##Vind afwijkende vormen doormiddeln van afstand punten NWB tot punten OSM
+##Afwijking NWB lijn tot basmap shape
 Vind voor alle punten op een NWB segment de dichtsbijzijnde punten van OSM. Kijk of het maximum en het gemiddelde niet tever afwijken.
 
 
@@ -251,9 +246,26 @@ nwb_select@data$'min_afstand_osm' <- distance_matrix$min[match(nwb_select$WVK_ID
 nwb_select@data$'mean_afstand_osm' <- distance_matrix$mean[match(nwb_select$WVK_ID,distance_matrix$WVK_ID)]
 nwb_select@data$'median_afstand_osm' <- distance_matrix$median[match(nwb_select$WVK_ID,distance_matrix$WVK_ID)]
 
-rm(distance_matrix_OSM_matching)
+rm(distance_matrix)
+rm(OSM)
+rm(NWB)
+rm(points_OSM)
 
 ```
+
+########################################################EIND FEATURE ENGINEERING#################################################################
+
+
+
+
+
+
+########################################FOUTEN OPSPOREN#################################
+
+####hier alleen nwb_select en basemap_select gebruiken als input
+
+#######################################EIND FOUTEN OPSPOREN############################################
+
 
 
 
