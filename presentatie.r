@@ -20,7 +20,7 @@ for( i in 1:length(nwb_select)){
   
   
   
-  m=   addPolylines( m, lat = nwb_select@lines[[i]]@Lines[[1]]@coords[,2], lng =  nwb_select@lines[[i]]@Lines[[1]]@coords[,1], color = 'blue',  popup = paste( '<h> meandist:', nwb_select$mean_afstand_osm[i], 'maxdist', nwb_select$max_afstand_osm[i] ,'vorm', nwb_select$afwijkende_vorm[i]  ,   '</h>'  ))
+  m=   addPolylines( m, lat = nwb_select@lines[[i]]@Lines[[1]]@coords[,2], lng =  nwb_select@lines[[i]]@Lines[[1]]@coords[,1], color = 'blue',  popup = paste( '<h> id:', nwb_select$WVK_ID[i], 'maxdist', nwb_select$max_afstand_osm[i] ,'vorm', nwb_select$afwijkende_vorm[i]  ,   '</h>'  ))
 
   
   }
