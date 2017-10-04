@@ -49,8 +49,8 @@ leaflet() %>% addProviderTiles(providers$CartoDB)  %>%
 
   addPolylines(data=basemap_select_wgs[which(basemap_select_wgs$segmentID == 2005584),],weight = 8,opacity=~dekking_scale,col=~factpal(ge50),group="OSM",
                popup= ~paste("SegmentID:",segmentID, "<br>",
-                             "nn_nwb: ",nn_nwb_half, "<br>",
-                             "half_hausdorff: ", hh_dist,"<br>",
+                             "nn_nwb: ",nearest_nwb_line_id, "<br>",
+                             "half_hausdorff: ", afstand_nwb_lijn ,"<br>",
                              "dekking: ",dekking),highlightOptions=highlightOptions(fillOpacity = 1,
                                                                                     bringToFront = TRUE)) %>%
   # Layers control
