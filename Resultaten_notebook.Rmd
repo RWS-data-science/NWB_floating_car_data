@@ -437,6 +437,27 @@ leaflet() %>% addProviderTiles(providers$CartoDB)  %>%
 
 
 
+##afwijkende straatnamen
+
+##afwijkende gemeentes
+
+##waar missen nwb lijnen tov osm waar ook veel gereden wordt
+
+##Waar wijkt de vorm van het nwb af van die van het osm
+
+```{r}
+nwb_select$afwijkende_vorm = 0
+
+nwb_select$afwijkende_vorm[  (nwb_select$max_afstand_osm  < 1.2*nwb_select$mean_afstand_osm) &   (nwb_select$mean_afstand_osm > 15)    ] = 1
+
+```
+
+
+
+##rotonde vs kruispunt
+
+
+
 
 
 ##Leaflet om verschillen inzichtelijk te maken
