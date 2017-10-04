@@ -422,9 +422,9 @@ leaflet() %>% addProviderTiles(providers$CartoDB)  %>%
                popup=~paste("WVK_ID: ",WVK_ID,"<br>",
                             "v_mean_dag: ", v_mean_dag,"<br>",
                             "v_max WEGGEG/WKD: ", vmax, "<br>",
-                            "dekking_dag: ",dekking_dag),
-               highlightOptions=highlightOptions(fillOpacity = 1,
-                              bringToFront = TRUE) ) #%>% 
+                            "dekking_dag: ",dekking_dag))
+ #              highlightOptions=highlightOptions(fillOpacity = 1,
+#                              bringToFront = TRUE) ) #%>% 
 #  addLegend("bottomright",bins = 5, pal = colpal, values=~v_diff_dag,
 #           title = "Speed difference",
 #           opacity = 0.7)
@@ -449,13 +449,10 @@ leaflet() %>% addProviderTiles(providers$CartoDB)  %>%
 
 ```
 
-Check equidistante shapes
+Export NWB shape
 ```{r}
-test<- nwb_select_eq[which(nwb_select_eq$WVK_ID == 209298002),]
-test@lines
-
-test2<- nwb_select[which(nwb_select$WVK_ID == 209298002),]
-test2@lines
+save(nwb_select,file='db/nwb_select_features.RData')
+save(basemap_select,file='db/basemap_select_features.RData')
 ```
 
 
