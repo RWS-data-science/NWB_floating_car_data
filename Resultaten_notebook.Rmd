@@ -372,6 +372,54 @@ rm(points_OSM)
 
 
 
+##Afwijking OSM lijn to NWB shape
+Vind voor alle punten op een NWB segment de dichtsbijzijnde punten van OSM. Kijk of het maximum en het gemiddelde niet tever afwijken.
+
+
+```{r,echo=T,eval=F,cache=T}
+#GEBRUIK NU WEL EQUIDISTANTE SHAPES
+
+#zet alle punten van OSM in een dataframe
+OSM = basemap_select_eq
+NWB = nwb_select_eq
+
+points_nwb = pblapply(c(1:length(NWB@lines)), function(i){
+  as.data.frame(NWB@lines[[i]]@Lines[[1]]@coords)
+})
+points_nwb = rbindlist(points_nwb)
+points_nwb = points_nwb[!duplicated(points_nwb),]
+
+
+#loop door alle OSM lines heen en bereken de min, max en mean tot de points
+distance_matrix = pblapply(1:length(OSM@lines), function(i){
+  
+  distances = lapply(1:nrow(OSM@lines[[i]]@Lines[[1]]@coords ), function(j){
+     min(sqrt(  ( (points_nwb$x - OSM@lines[[i]]@Lines[[1]]@coords[j,1])^2 + (points_nwb$y - OSM@lines[[i]]@Lines[[1]]@coords[j,2])^2) ) )
+    
+  })
+  distances = unlist(distances)
+  return( data.frame( 'segmentID' = as.numeric(as.character(OSM@data$segmentID[i])), 'max' =  max(distances), 'min' = min(distances) , 'mean' = mean(distances), 'median' =  median(distances)  ))
+  
+})
+
+distance_matrix = rbindlist(distance_matrix)
+
+
+
+basemap_select@data$'max_afstand_nwb' <- distance_matrix$max[match(basemap_select$segmentID,distance_matrix$segmentID)]
+basemap_select@data$'min_afstand_nwb' <- distance_matrix$min[match(basemap_select$segmentID,distance_matrix$segmentID)]
+basemap_select@data$'mean_afstand_nwb' <- distance_matrix$mean[match(basemap_select$segmentID,distance_matrix$segmentID)]
+basemap_select@data$'median_afstand_nwb' <- distance_matrix$median[match(basemap_select$segmentID,distance_matrix$segmentID)]
+
+rm(distance_matrix)
+rm(OSM)
+rm(NWB)
+rm(points_nwb)
+
+```
+
+
+
 ########################################################EIND FEATURE ENGINEERING#################################################################
 
 
@@ -442,13 +490,20 @@ leaflet() %>% addProviderTiles(providers$CartoDB)  %>%
 ##afwijkende gemeentes
 
 ##waar missen nwb lijnen tov osm waar ook veel gereden wordt
+```{r}
+basemap_select$mist_in_nwb = 0
+
+basemap_select$mist_in_nwb[basemap_select$dekking_dag > 0.005 &   ] = 1
+
+```
+
 
 ##Waar wijkt de vorm van het nwb af van die van het osm
 
 ```{r}
 nwb_select$afwijkende_vorm = 0
 
-nwb_select$afwijkende_vorm[  (nwb_select$max_afstand_osm  < 1.2*nwb_select$mean_afstand_osm) &   (nwb_select$mean_afstand_osm > 15)    ] = 1
+nwb_select$afwijkende_vorm[  (nwb_select$max_afstand_osm  < 30) &   (nwb_select$mean_afstand_osm > 8)    ] = 1
 
 ```
 
