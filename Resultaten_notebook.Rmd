@@ -133,11 +133,36 @@ distance_lijst_OSM = pblapply(c(1:length(basemap_select_eq@lines)), function(i){
     mean_dist(basemap_select_eq@lines[[i]]@Lines[[1]]@coords, nwb_select_eq@lines[[j]]@Lines[[1]]@coords  )
   })
   
+  angle_to_NWB_lines = lapply(c(1:length(nwb_select_eq@lines)),function(j){
+    ba_x= basemap_select_eq@lines[[i]]@Lines[[1]]@coords[1,1] 
+    ba_y= basemap_select_eq@lines[[i]]@Lines[[1]]@coords[1,2] 
+    bb_x= basemap_select_eq@lines[[i]]@Lines[[1]]@coords[nrow(basemap_select_eq@lines[[i]]@Lines[[1]]@coords),1] 
+    bb_y= basemap_select_eq@lines[[i]]@Lines[[1]]@coords[nrow(basemap_select_eq@lines[[i]]@Lines[[1]]@coords),2] 
+    a1<- atan2(bb_y-ba_y,bb_x-ba_x)
+    
+    # na_min_x<- min(abs(outer(nwb_select_eq@lines[[j]]@Lines[[1]]@coords[,1],basemap_select_eq@lines[[i]]@Lines[[1]]@coords[,1],FUN="-")))
+    # na_x=  nwb_select_eq@lines[[j]]@Lines[[1]]@coords[which(abs(outer(nwb_select_eq@lines[[j]]@Lines[[1]]@coords[,1],basemap_select_eq@lines[[i]]@Lines[[1]]@coords[,1],FUN="-"))==na_min_x,arr.ind = TRUE)[1,1],1]
+    # na_y=  nwb_select_eq@lines[[j]]@Lines[[1]]@coords[which(abs(outer(nwb_select_eq@lines[[j]]@Lines[[1]]@coords[,1],basemap_select_eq@lines[[i]]@Lines[[1]]@coords[,1],FUN="-"))==na_min_x,arr.ind = TRUE)[1,1],2]
+    # 
+    # na_min_y<- min(abs(outer(nwb_select_eq@lines[[j]]@Lines[[1]]@coords[,2],basemap_select_eq@lines[[i]]@Lines[[1]]@coords[,2],FUN="-")))
+    # nb_x=  nwb_select_eq@lines[[j]]@Lines[[1]]@coords[which(abs(outer(nwb_select_eq@lines[[j]]@Lines[[1]]@coords[,2],basemap_select_eq@lines[[i]]@Lines[[1]]@coords[,2],FUN="-"))==na_min_y,arr.ind = TRUE)[1,1],1]
+    # nb_y=  nwb_select_eq@lines[[j]]@Lines[[1]]@coords[which(abs(outer(nwb_select_eq@lines[[j]]@Lines[[1]]@coords[,2],basemap_select_eq@lines[[i]]@Lines[[1]]@coords[,2],FUN="-"))==na_min_y,arr.ind = TRUE)[1,1],2]
+    na_x= nwb_select_eq@lines[[j]]@Lines[[1]]@coords[1,1] 
+    na_y= nwb_select_eq@lines[[j]]@Lines[[1]]@coords[1,2] 
+    nb_x= nwb_select_eq@lines[[j]]@Lines[[1]]@coords[nrow(nwb_select_eq@lines[[j]]@Lines[[1]]@coords),1] 
+    nb_y= nwb_select_eq@lines[[j]]@Lines[[1]]@coords[nrow(nwb_select_eq@lines[[j]]@Lines[[1]]@coords),2] 
+    
+    a2<- atan2(nb_y-na_y,nb_x-na_x)
+    angle<- (a1-a2)*180/pi
+    return(angle)
+  })
   
   minimum_distance_osm = min(unlist( hausdorf_distances_to_NWB_lines))
-  label = which.min( unlist(hausdorf_distances_to_NWB_lines) )
   
-  return( data.frame( 'OSM_ID'=  as.integer(basemap_select_eq$segmentID[i]), 'WVK_ID'=  as.integer(as.numeric(as.character(nwb_select_eq$WVK_ID[label]))), 'dist' = minimum_distance_osm))
+  label = which.min( unlist(hausdorf_distances_to_NWB_lines) )
+  angle = angle_to_NWB_lines[[label]] 
+  
+  return( data.frame( 'OSM_ID'=  as.integer(basemap_select_eq$segmentID[i]), 'WVK_ID'=  as.integer(as.numeric(as.character(nwb_select_eq$WVK_ID[label]))), 'dist' = minimum_distance_osm,'angle_to_nn' = as.integer(angle)))
 })
 
 
@@ -150,6 +175,7 @@ basemap_select@data$'nearest_nwb_line_id' <- distance_lijst_OSM$WVK_ID[match(bas
 nwb_select$is_nn50<- ifelse(nwb_select$WVK_ID %in% basemap_select$nearest_nwb_line_id[basemap_select$afstand_nwb_lijn<50],FALSE,TRUE )
 nwb_select$nn_OSM<- distance_lijst_OSM$OSM_ID[match(nwb_select$WVK_ID,distance_lijst_OSM$WVK_ID)]
 nwb_select$nn_distance<- distance_lijst_OSM$Half_Hausdorfdistance[match(nwb_select$WVK_ID,distance_lijst_OSM$WVK_ID)]
+nwb_select$nn_angle<- distance_lijst_OSM$angle_to_nn[match(nwb_select$WVK_ID,distance_lijst_OSM$WVK_ID)]
 
 
 rm(distance_lijst_OSM)
@@ -157,7 +183,7 @@ rm(distance_lijst_OSM)
 
 ```
 
-
+Hoek tussen twee gematchte segmenten 
 
 
 ##afstanden juncties NWB tot juncties OSM
@@ -345,15 +371,26 @@ nwb_select$vmax_OSM <- basemap_select$maxSpeedKPH[match(nwb_select$nn_OSM,basema
 nwb_select$vOpt_OSM <- basemap_select$optSpeedKPH[match(nwb_select$nn_OSM,basemap_select$segmentID)]
 
 
-#merge
-#basemap_select$nn_nwb_half<- distance_matrix_OSM$NWB_id[match(basemap_select$segmentID,distance_matrix_OSM$OSM_id)]
-#basemap_select$hh_dist<- distance_matrix_OSM$Half_Hausdorfdistance[match(basemap_select$segmentID,distance_matrix_OSM$OSM_id)]
-#basemap_select$ge50<- ifelse(basemap_select$hh_dist >=50, TRUE,FALSE)
+##straatnamen
+nwb_select$straatnaam_OSM <- basemap_select$name[match(nwb_select$nn_OSM,basemap_select$segmentID)]
+nwb_select$straatnaam_string_dist<- stringdist(tolower(nwb_select$STT_NAAM),tolower(nwb_select$straatnaam_OSM), method = "lv")
 
 
-#nwb_select$is_nn50<- ifelse(nwb_select$WVK_ID %in% #basemap_select$nearest_nwb_line_id[basemap_select$afstand_nwb_lijn<50],FALSE,TRUE )
-# nwb_select$nn_OSM<- distance_matrix_OSM$OSM_id[match(nwb_select$WVK_ID,distance_matrix_OSM$NWB_id)]
-# nwb_select$hh_dist<- distance_matrix_OSM$Half_Hausdorfdistance[match(nwb_select$WVK_ID,distance_matrix_OSM$NWB_id)]
+##gemeentenamen
+gemeenten <- readOGR("db/Bestuurlijkegrenzen-gemeenten-actueel-shp/Bestuurlijkegrenzen-gemeenten-actueel.shp")
+#plot(gemeenten)
+proj4string(gemeenten) <- proj4string(nwb_select)
+#gemeenten <- spTransform(gemeenten,proj4string(nwb_select))
+nwb_select$gemeente_check <- as.character(over(nwb_select,gemeenten)$gemeentena)
+
+nwb_select$gemeente_string_dist<- stringdist(tolower(nwb_select$GME_NAAM),tolower(nwb_select$gemeente_check), method = "lv")
+
+wgs1<- spTransform(nwb_select,"+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0")
+wgs2<- spTransform(gemeenten,"+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0")
+
+leaflet() %>%  addProviderTiles(providers$CartoDB) %>%
+ # addPolygons(data=wgs2,popup=~gemeentena) %>%
+  addPolylines(data=wgs1[which(wgs1$string_dist >2),],col="red",popup=~paste("str = ",STT_NAAM,"<br>", "dist = ", max_afstand_osm)) 
 
 ```
 
