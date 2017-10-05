@@ -57,7 +57,7 @@ IDs = remove_doubles(basemap_select)
 
 #gooi alle lines die niet in de lijst van IDs voorkomen weg
 
-  basemap_select<- basemap_select[!( as.numeric( as.character(basemap_select@data$segmentID)) %in% IDs),]
+  basemap_select<- basemap_select[( as.numeric( as.character(basemap_select@data$segmentID)) %in% IDs),]
 
 
 rm(IDs)
