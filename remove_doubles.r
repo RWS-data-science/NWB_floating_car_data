@@ -6,7 +6,8 @@ remove_doubles = function(OSM){
 
 OSM_no_doubles = list(OSM@lines[[1]]@Lines[[1]]@coords)
 IDs =  as.numeric(as.character( OSM@data$segmentID[1]  ) ) 
-IDs_twee_richting = list()
+IDs_twee_richting = c()
+
 
 
 
@@ -17,12 +18,9 @@ for(i in 2:length(OSM@lines)){
   
   
   dubbel = lapply(1:length(OSM_no_doubles), function(j){
-    
     if(nrow(OSM_no_doubles[[j]])== nrow(x)){
       if(sum(OSM_no_doubles[[j]] == x) == ncol(x)*nrow(x) ){
-        IDs_twee_richting = c(IDs_twee_richting, IDs[j])
-        print('hoi')
-        return(1)
+        return(IDs[j])
       }else{
         return(0)
       }
@@ -31,11 +29,13 @@ for(i in 2:length(OSM@lines)){
     }
   })
   
+  dubbel = unlist(dubbel)
   
-  
-  if(sum( unlist(dubbel))== 0){
-  OSM_no_doubles[[n]] =  OSM@lines[[i]]@Lines[[1]]@coords
+  if(sum( dubbel)== 0){
+  OSM_no_doubles =  c(OSM_no_doubles, list(OSM@lines[[i]]@Lines[[1]]@coords))
   IDs = c(IDs, as.numeric(as.character( OSM@data$segmentID[i] )) )
+  }else{
+    IDs_twee_richting = c(IDs_twee_richting, sum(dubbel))
   }
    
     
