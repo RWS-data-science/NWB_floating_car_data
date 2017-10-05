@@ -35,7 +35,7 @@ for(i in 2:length(OSM@lines)){
   OSM_no_doubles =  c(OSM_no_doubles, list(OSM@lines[[i]]@Lines[[1]]@coords))
   IDs = c(IDs, as.numeric(as.character( OSM@data$segmentID[i] )) )
   }else{
-    IDs_twee_richting = c(IDs_twee_richting, sum(dubbel))
+    IDs_twee_richting = c(IDs_twee_richting, dubbel[dubbel != 0][1]  )
   }
    
     
