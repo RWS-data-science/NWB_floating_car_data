@@ -52,17 +52,20 @@ Blijkbaar komen in de OSM basemap veel dubbele wegsementen voor (exact dezelfde 
 ```{r}
 source('remove_doubles.r')
 #maak een vector van IDs die de shape omscrijven terwijl alles maar 1 keer voorkomt
-IDs = remove_doubles(basemap_select) 
-
+output = remove_doubles(basemap_select) 
+IDs = output[[1]]
+IDs_twee_richting = output[[2]]
 
 #gooi alle lines die niet in de lijst van IDs voorkomen weg
 
   basemap_select<- basemap_select[( as.numeric( as.character(basemap_select@data$segmentID)) %in% IDs),]
-
-
+  
 rm(IDs)
 
+#voeg kolom toe of basemap tweerichting is
+basemap_select@data$twee_richting = 0
 
+basemap_select@data$twee_richting[ basemap_select@data$segmentID %in% IDs_twee_richting  ]  = 1
 
 
 
