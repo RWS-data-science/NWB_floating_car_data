@@ -54,23 +54,14 @@ source('remove_doubles.r')
 #maak een vector van IDs die de shape omscrijven terwijl alles maar 1 keer voorkomt
 IDs = remove_doubles(basemap_select) 
 
-i=1
 
 #gooi alle lines die niet in de lijst van IDs voorkomen weg
-while(i <= length(basemap_select@lines)){
-  
-  if(! (basemap_select@lines[[i]]@ID %in% IDs)){
-     basemap_select<- basemap_select[-i,] 
-    i=i
-  }else{
-    i = i+1
-    if (!i%%100){print(i)}
-  }
-  
-}
+
+  basemap_select<- basemap_select[!( as.numeric( as.character(basemap_select@data$segmentID)) %in% IDs),]
+
 
 rm(IDs)
-rm(i)
+
 
 
 

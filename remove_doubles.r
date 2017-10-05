@@ -5,7 +5,7 @@ remove_doubles = function(OSM){
 
 
 OSM_no_doubles = list(OSM@lines[[1]]@Lines[[1]]@coords)
-IDs = list(OSM@lines[[1]]@ID)
+IDs = list(  as.numeric(as.character( OSM@data$segmentID[1]) ) )
 
 n=2
 for(i in 2:length(OSM@lines)){
@@ -17,7 +17,7 @@ for(i in 2:length(OSM@lines)){
   dubbel = lapply(1:length(OSM_no_doubles), function(j){
     
     if(nrow(OSM_no_doubles[[j]])== nrow(x)){
-   return( sum(OSM_no_doubles[[j]] == x) == ncol(x)*nrow(x))
+   return( sum(OSM_no_doubles[[j]] == x) == ncol(x)*nrow(x) ) 
     }else{
       return(0)
     }
@@ -27,7 +27,7 @@ for(i in 2:length(OSM@lines)){
   
   if(sum( unlist(dubbel))== 0){
   OSM_no_doubles[[n]] =  OSM@lines[[i]]@Lines[[1]]@coords
-  IDs[[n]] = OSM@lines[[i]]@ID
+  IDs[[n]] = as.numeric(as.character( OSM@data$segmentID[i] ))
   n = n+1  
   }
    
