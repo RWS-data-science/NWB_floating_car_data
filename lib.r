@@ -14,5 +14,6 @@ library(plyr)
 library(leaflet)
 library(foreign)
 library(dplyr)
+library(stringdist)
 
 

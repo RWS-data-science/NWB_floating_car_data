@@ -177,6 +177,9 @@ nwb_select$nn_OSM<- distance_lijst_OSM$OSM_ID[match(nwb_select$WVK_ID,distance_l
 nwb_select$nn_distance<- distance_lijst_OSM$Half_Hausdorfdistance[match(nwb_select$WVK_ID,distance_lijst_OSM$WVK_ID)]
 nwb_select$nn_angle<- distance_lijst_OSM$angle_to_nn[match(nwb_select$WVK_ID,distance_lijst_OSM$WVK_ID)]
 
+#Bewaar de nn alleen als de hoek tussen de twee gematchte segmenten <= 30 graden. Dit voorkomt dat kruisende wegen ten onrechte worden gematched.
+nwb_select$nn_OSM_geen_kruispunt<- ifelse(abs(nwb_select$nn_angle)<=30 | abs(abs(nwb_select$nn_angle)-180)<=30, nwb_select$nn_OSM, NA  )
+
 
 rm(distance_lijst_OSM)
 
@@ -367,12 +370,12 @@ vmax_merged<- rbind(vmax_weggeg[,c('WVK_ID','OMSCHR')],vmax_wkd[,c('WVK_ID','OMS
 nwb_select$vmax<- vmax_merged$OMSCHR[match(nwb_select$WVK_ID,vmax_merged$WVK_ID)]
 #nwb_select_wgs$vmax<- vmax_merged$OMSCHR[match(nwb_select_wgs$WVK_ID,vmax_merged$WVK_ID)]
 
-nwb_select$vmax_OSM <- basemap_select$maxSpeedKPH[match(nwb_select$nn_OSM,basemap_select$segmentID)]
-nwb_select$vOpt_OSM <- basemap_select$optSpeedKPH[match(nwb_select$nn_OSM,basemap_select$segmentID)]
+nwb_select$vmax_OSM <- basemap_select$maxSpeedKPH[match(nwb_select$nn_OSM_geen_kruispunt,basemap_select$segmentID)]
+nwb_select$vOpt_OSM <- basemap_select$optSpeedKPH[match(nwb_select$nn_OSM_geen_kruispunt,basemap_select$segmentID)]
 
 
 ##straatnamen
-nwb_select$straatnaam_OSM <- basemap_select$name[match(nwb_select$nn_OSM,basemap_select$segmentID)]
+nwb_select$straatnaam_OSM <- basemap_select$name[match(nwb_select$nn_OSM_geen_kruispunt,basemap_select$segmentID)]
 nwb_select$straatnaam_string_dist<- stringdist(tolower(nwb_select$STT_NAAM),tolower(nwb_select$straatnaam_OSM), method = "lv")
 
 
@@ -385,12 +388,14 @@ nwb_select$gemeente_check <- as.character(over(nwb_select,gemeenten)$gemeentena)
 
 nwb_select$gemeente_string_dist<- stringdist(tolower(nwb_select$GME_NAAM),tolower(nwb_select$gemeente_check), method = "lv")
 
-wgs1<- spTransform(nwb_select,"+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0")
-wgs2<- spTransform(gemeenten,"+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0")
+# wgs1<- spTransform(nwb_select,"+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0")
+# wgs2<- spTransform(gemeenten,"+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0")
+# 
+# leaflet() %>%  addProviderTiles(providers$CartoDB) %>%
+#  # addPolygons(data=wgs2,popup=~gemeentena) %>%
+#   addPolylines(data=wgs1[which(wgs1$straatnaam_string_dist >2),],col="red",popup=~paste("str = ",STT_NAAM,"<br>", "dist = ", max_afstand_osm)) 
 
-leaflet() %>%  addProviderTiles(providers$CartoDB) %>%
- # addPolygons(data=wgs2,popup=~gemeentena) %>%
-  addPolylines(data=wgs1[which(wgs1$string_dist >2),],col="red",popup=~paste("str = ",STT_NAAM,"<br>", "dist = ", max_afstand_osm)) 
+rm(gemeenten)
 
 ```
 
