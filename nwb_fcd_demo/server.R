@@ -10,60 +10,68 @@
 library(shiny)
 require(leaflet)
 
-
+#c("Mist_NWB","Mist_OSM","Straatnaam","Gemeentenaam","Rijrichting","Snelheid","Junctie")
 
 # Define server logic required to draw a histogram
 server<- function(input, output,session) {
-  load("basemap_select_wgs.RData")
-  load("nwb_select_wgs.RData")
+  #load("basemap_select_wgs.RData")
+  
   
 
-  base<- reactive({
-    
-    #distance_matrix$trigger<- ifelse(distance_matrix$Half_Hausdorfdistance >=50, TRUE,FALSE) #hh distance greater than or equal to 50 m
-    
-  
-    #basemap_select_wgs$nn_nwb_half<- distance_matrix$NWB_id[match(basemap_select_wgs$segmentID,distance_matrix$OSM_id)]
-    basemap_select_wgs_2$trigger<- ifelse(basemap_select_wgs_2$hh_dist>= input$distance,TRUE,FALSE)
-    basemap_select_wgs_2
-   # basemap_select_wgs$hh_dist<- distance_matrix$Half_Hausdorfdistance[match(basemap_select_wgs$segmentID,distance_matrix$OSM_id)]
 
-  })
-
-  nwb<- reactive({
-    nwb_select_wgs_2$is_nn_dist<- ifelse(nwb_select_wgs_2$WVK_ID %in% basemap_select_wgs_2$nn_nwb_half[basemap_select_wgs_2$hh_dist< input$distance ],TRUE,FALSE )
-    nwb_select_wgs_2
-  })
+    nwb<- reactive({
+    if (input$fout == "Mist_OSM"){
+      nwb_select_wgs[which(nwb_select_wgs$mist_in_osm == 1),]
+    } else if (input$fout == "Straatnaam"){
+      nwb_select_wgs[which(nwb_select_wgs$straatnaam_verschilt == 1),]
+    } else if (input$fout == "Gemeentenaam"){
+      nwb_select_wgs[which(nwb_select_wgs$gemeentenaam_verschilt == 1),]
+    } else if (input$fout == "Snelheid"){
+      nwb_select_wgs[which(nwb_select_wgs$sneller_gereden_dan_vmax == 1),]
+    } else if (input$fout == "Rijrichting"){
+      nwb_select_wgs[which(nwb_select_wgs$rijrichting_verschilt == 1),]  
+    } else{
+      nwb_select_wgs
+    }
+    })
   
 
   
   output$map <- renderLeaflet({
     
-    factpal <- colorFactor(c("green","black"), c(TRUE,FALSE))
-    factpal_nwb <- colorFactor(c("red","blue"), c(TRUE,FALSE))
+    colpal<- colorNumeric('Spectral',domain = nwb_select_wgs$v_diff_dag)
     
-
-    ##leaflet
+    ##leaflet straatnamen
     leaflet() %>% addProviderTiles(providers$CartoDB)  %>% 
-    addPolylines(data=nwb(),
-                 opacity=0.5,col=~factpal_nwb(is_nn50),
-                 popup=~paste("WVK_ID: ",WVK_ID),group="NWB" ) %>%
-      
-    addPolylines(data=base(),
-                 weight = 5,opacity=0.5,col=~factpal(ge50),group="OSM",
-                 popup= ~paste("SegmentID:",segmentID, "<br>",
-                               "nn_nwb: ",nn_nwb_half, "<br>",
-                               "half_hausdorff: ", hh_dist)) %>%
-    # Layers control
-    addLayersControl(position = "bottomleft",
-      overlayGroups = c("NWB", "OSM"),
-      options = layersControlOptions(collapsed = FALSE)) %>%
+      addPolylines(data=nwb(),opacity=~dekking_dag_scale,#,col=~colpal(v_diff_dag),
+                   popup=~paste("<b> WVK_ID: </b>",WVK_ID,"<br>",
+                                "<b> Gemiddeld gereden snelheid overdag: </b>", round(v_mean_dag,2),"<br>",
+                                "<b> v_max WEGGEG/WKD: </b>", vmax, "<br>",
+                                "<b> v_max OSM: </b>", vmax_OSM, "<br>",
+                                "<b> dekking_dag: </b>",round(dekking_dag,2), "<br>",
+                                "<b> STT_NAAM NWB: </b>", STT_NAAM, "<br>",
+                                "<b> Straatnaam OSM: </b>",straatnaam_OSM,"<br>",
+                                "<b> GME_NAAM NWB: </b>",GME_NAAM, "<br>",
+                                "<b> Gemeente volgens CBS: </b>", gemeente_check, "<br>",
+                                "<b> Rijrichting NWB: </b>", RIJRICHTNG, "<br>",
+                                "<b> Tweerichtingsverkeer volgens OSM: </b>", twee_richting_OSM
+                                )
+                   )
+                   
     
-    addLegend("bottomright", colors = c("chartreuse","black","blue","red"), labels = c("Wel in OSM, ook in NWB","Wel in OSM, niet NWB",
-                                                                                       "Wel in NWB, ook in OSM","Wel in NWB, niet in OSM"),
-              title = "Legend",
-              opacity = 0.7)
+  })
+  observe({
+    proxy <- leafletProxy("map",data=basemap_select_wgs)
     
+    # Remove any existing legend, and only if the legend is
+    # enabled, create a new one.
+    proxy %>% clearControls()
+    if (input$fout == "Mist_OSM") {
+      #pal <- colorpal()
+      proxy %>% addPolylines(data=basemap_select_wgs,col="red")
+    } else if (input$fout == "Mist_NWB"){
+      proxy %>% addPolylines(data=basemap_select_wgs[which(basemap_select_wgs$mist_in_nwb == 1),],col="red")
+    }
   })
   
 }
