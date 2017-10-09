@@ -15,6 +15,7 @@ require(leaflet)
 ui <- bootstrapPage(
   tags$style(type = "text/css", "html, body {width:100%;height:100%}"),
   leafletOutput("map", width = "100%", height = "100%"),
+<<<<<<< HEAD
   absolutePanel(top = 10, right = 10,
                 selectInput("fout", "Type verschil:", choices =  c(
                                                                    "Ontbreekt in NWB" =  "Mist_NWB",
@@ -26,4 +27,13 @@ ui <- bootstrapPage(
                                                                    "Junctie" = "Junctie")
                 )
   )
+=======
+  checkboxGroupInput("fout", "Type verschil:", choiceValues = c("Mist_NWB","Mist_OSM","Straatnaam","Gemeentenaam","Rijrichting","Snelheid","Junctie"),choiceNames = c("Ontbreekt in NWB",
+                                                                                                                                                       "Ontbreekt in OSM",
+                                                                                                                                                       "Straatnaam",
+                                                                                                                                                       "Gemeentenaam",
+                                                                                                                                                       "Rijrichting",
+                                                                                                                                                       "Snelheid",
+                                                                                                                                                       "Junctie/kruising op andere plaats"))
+>>>>>>> 13ae7097c7adc00b1787ae8b206b716468962eaa
 )
