@@ -29,8 +29,8 @@ Onderstaande code importeert alle benodigde libraries en functies en laadt vervo
 
 ```{r, echo=F,cache=T,eval=F}
 source('lib.r')
-load("db/basemap_select.RData")
-load("db/nwb_select2.RData")
+load("db/basemap_selectie_Utrecht.RData")
+load("db/nwb_selectie_Utrecht.RData")
 ```
 
 Om het NWB bestand te kunnen vergelijken zullen deze op elkaar gemapt moeten worden. Hiervoor is voor ieder ieder lijnsegment uit de OSM basemap gezocht naar een 'nearest neighbor' in het NWB. Met behulp van de afstand tot de nearest neighbor kunnen afwijkingen worden gedetecteerd. Voorbeeld: Objecten in de OSM basemap die geen nearest neighbor in het NWB hebben binnen een bepaalde marge kunnen duiden op missende/onjuiste informatie in het NWB. Andersom (NWB object zonder OSM nearest neighbor) duidt op een weg die wel in NWB bestaat, maar niet in de OSM basemap. Om de afstand te bepalen tussen een object in de OSM basemap en een object in NWB, is gebruik gemaakt van een afgeleide van de [Hausdorff distance](https://en.wikipedia.org/wiki/Hausdorff_distance). Hiervoor is eerst nog enige bewerking gedaan.
@@ -42,6 +42,9 @@ rd<- "+proj=sterea +lat_0=52.15616055555555 +lon_0=5.38763888888889 +k=0.999908 
 
 nwb_select<- spTransform(nwb_select,rd)
 basemap_select<- spTransform(basemap_select,rd)
+
+##verwijder fiets- en voetpaden uit NWB
+nwb_select <- nwb_select[which(!nwb_select$BST_CODE %in% c("VP","FP")),]
 
 rm(rd)
 ```
@@ -60,14 +63,16 @@ IDs_twee_richting = output[[2]]
 
   basemap_select<- basemap_select[( as.numeric( as.character(basemap_select@data$segmentID)) %in% IDs),]
   
-rm(IDs)
+
 
 #voeg kolom toe of basemap tweerichting is
-basemap_select@data$twee_richting = 0
+basemap_select$twee_richting <- ifelse(basemap_select$segmentID %in% IDs_twee_richting,1,0)
 
-basemap_select@data$twee_richting[ basemap_select@data$segmentID %in% IDs_twee_richting  ]  = 1
+#basemap_select$twee_richting[ basemap_select@data$segmentID %in% IDs_twee_richting  ]  = 1
 
-
+rm(IDs_twee_richting)
+rm(IDs)
+rm(output)
 
 ```
 
@@ -172,10 +177,13 @@ distance_lijst_OSM = rbindlist(distance_lijst_OSM)
 basemap_select@data$'afstand_nwb_lijn' <- distance_lijst_OSM$dist[match(basemap_select@data$segmentID , distance_lijst_OSM$OSM_ID)]
 basemap_select@data$'nearest_nwb_line_id' <- distance_lijst_OSM$WVK_ID[match(basemap_select@data$segmentID , distance_lijst_OSM$OSM_ID)]
 
-nwb_select$is_nn50<- ifelse(nwb_select$WVK_ID %in% basemap_select$nearest_nwb_line_id[basemap_select$afstand_nwb_lijn<50],FALSE,TRUE )
+nwb_select$is_nn50<- ifelse(nwb_select$WVK_ID %in% basemap_select$nearest_nwb_line_id[basemap_select$afstand_nwb_lijn<50],TRUE,FALSE )
 nwb_select$nn_OSM<- distance_lijst_OSM$OSM_ID[match(nwb_select$WVK_ID,distance_lijst_OSM$WVK_ID)]
 nwb_select$nn_distance<- distance_lijst_OSM$Half_Hausdorfdistance[match(nwb_select$WVK_ID,distance_lijst_OSM$WVK_ID)]
 nwb_select$nn_angle<- distance_lijst_OSM$angle_to_nn[match(nwb_select$WVK_ID,distance_lijst_OSM$WVK_ID)]
+
+
+
 
 #Bewaar de nn alleen als de hoek tussen de twee gematchte segmenten <= 30 graden. Dit voorkomt dat kruisende wegen ten onrechte worden gematched.
 nwb_select$nn_OSM_geen_kruispunt<- ifelse(abs(nwb_select$nn_angle)<=30 | abs(abs(nwb_select$nn_angle)-180)<=30, nwb_select$nn_OSM, NA  )
@@ -231,6 +239,8 @@ rm(NWB_juncties)
 rm(OSM_juncties)
 
 nwb_select@data$'afstand_osm_splitsing' <- matrix_juncties$dist[match(nwb_select@data$WVK_ID , matrix_juncties$WVK_ID)]
+nwb_select@data$'x_osm_splitsing' <- matrix_juncties$x_osm[match(nwb_select@data$WVK_ID , matrix_juncties$WVK_ID)]
+nwb_select@data$'y_osm_splitsing' <- matrix_juncties$y_osm[match(nwb_select@data$WVK_ID , matrix_juncties$WVK_ID)]
 #rm(juncties)
 rm(matrix_juncties)
 
@@ -388,14 +398,15 @@ nwb_select$gemeente_check <- as.character(over(nwb_select,gemeenten)$gemeentena)
 
 nwb_select$gemeente_string_dist<- stringdist(tolower(nwb_select$GME_NAAM),tolower(nwb_select$gemeente_check), method = "lv")
 
-# wgs1<- spTransform(nwb_select,"+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0")
-# wgs2<- spTransform(gemeenten,"+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0")
-# 
-# leaflet() %>%  addProviderTiles(providers$CartoDB) %>%
-#  # addPolygons(data=wgs2,popup=~gemeentena) %>%
-#   addPolylines(data=wgs1[which(wgs1$straatnaam_string_dist >2),],col="red",popup=~paste("str = ",STT_NAAM,"<br>", "dist = ", max_afstand_osm)) 
+#rijrichting
+nwb_select$twee_richting_OSM <- basemap_select$twee_richting[match(nwb_select$nn_OSM_geen_kruispunt,basemap_select$segmentID)]
+
+#nwb_select$rijrichting_verschilt <- ifelse(nwb_select$RIJRICHTNG)
 
 rm(gemeenten)
+rm(vmax_weggeg)
+rm(vmax_wkd)
+rm(vmax_merged)
 
 ```
 
@@ -463,30 +474,25 @@ nacht_agg$perc_coverage <- nacht_agg$aantal/nacht_agg$minuten_gelezen#(10*13*60)
 #remove segments with no traffic
 nacht_agg<- nacht_agg[which(nacht_agg$aantal>0),]
 
+rm(dagen);rm(nachten)
 rm(dag);rm(nacht)
+
 
 ```
 
 Voeg samen en visualiseer
 
 ```{r}
-nwb_select$v_mean_dag<- dag_agg$v_mean[match(nwb_select$nn_OSM,dag_agg$SegmentID)]
-nwb_select$dekking_dag<- dag_agg$perc_coverage[match(nwb_select$nn_OSM,dag_agg$SegmentID)]
+nwb_select$v_mean_dag<- dag_agg$v_mean[match(nwb_select$nn_OSM_geen_kruispunt,dag_agg$SegmentID)]
+nwb_select$dekking_dag<- dag_agg$perc_coverage[match(nwb_select$nn_OSM_geen_kruispunt,dag_agg$SegmentID)]
 
-nwb_select$v_mean_nacht<- nacht_agg$v_mean[match(nwb_select$nn_OSM,nacht_agg$SegmentID)]
-nwb_select$dekking_nacht<- nacht_agg$perc_coverage[match(nwb_select$nn_OSM,nacht_agg$SegmentID)]
+nwb_select$v_mean_nacht<- nacht_agg$v_mean[match(nwb_select$nn_OSM_geen_kruispunt,nacht_agg$SegmentID)]
+nwb_select$dekking_nacht<- nacht_agg$perc_coverage[match(nwb_select$nn_OSM_geen_kruispunt,nacht_agg$SegmentID)]
 
 nwb_select$v_diff_dag<- nwb_select$vmax - nwb_select$v_mean_dag
 nwb_select$v_diff_nacht<- nwb_select$vmax - nwb_select$v_mean_nacht
 
-#nwb_select_wgs$v_mean_dag<- dag_agg$v_mean[match(nwb_select_wgs$nn_OSM,dag_agg$SegmentID)]
-#nwb_select_wgs$dekking<- dag_agg$perc_coverage[match(nwb_select_wgs$nn_OSM,dag_agg$SegmentID)]
-
-#basemap_select$v_mean_dag<- dag_agg$v_mean[match(basemap_select$segmentID,dag_agg$SegmentID)]
-#basemap_select$dekking<- dag_agg$perc_coverage[match(basemap_select$segmentID,dag_agg$SegmentID)]
-
-#basemap_select_wgs$v_mean_dag<- dag_agg$v_mean[match(basemap_select_wgs$segmentID,dag_agg$SegmentID)]
-#basemap_select_wgs$dekking<- dag_agg$perc_coverage[match(basemap_select_wgs$segmentID,dag_agg$SegmentID)]
+#nwb_select$
 
 wgs<- "+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0"
 
@@ -501,45 +507,25 @@ nwb_select_wgs$dekking_dag_scale<- 0.2+(nwb_select_wgs$dekking_dag*0.8)/(1-0.2) 
 #basemap_select_wgs$ge50<- ifelse(basemap_select$afstand_nwb_lijn >=50, TRUE,FALSE)
 
 
-colpal<- colorNumeric('Spectral',domain = nwb_select_wgs$v_diff)
+colpal<- colorNumeric('Spectral',domain = nwb_select_wgs$v_diff_dag)
 
-##leaflet
+##leaflet straatnamen
 leaflet() %>% addProviderTiles(providers$CartoDB)  %>% 
-  addPolylines(data=nwb_select_wgs,opacity=~dekking_dag_scale,col=~colpal(v_diff_dag),
+  addPolylines(data=nwb_select_wgs,opacity=~dekking_dag_scale,#,col=~colpal(v_diff_dag),
                popup=~paste("WVK_ID: ",WVK_ID,"<br>",
                             "v_mean_dag: ", v_mean_dag,"<br>",
                             "v_max WEGGEG/WKD: ", vmax, "<br>",
-                            "dekking_dag: ",dekking_dag))
+                            "v_max OSM: ", vmax_OSM, "<br>",
+                            "dekking_dag: ",dekking_dag, "<br>",
+                            "STT_NAAM: ", STT_NAAM, "<br>",
+                            "Straatnaam OSM: ",straatnaam_OSM))
  #              highlightOptions=highlightOptions(fillOpacity = 1,
 #                              bringToFront = TRUE) ) #%>% 
-#  addLegend("bottomright",bins = 5, pal = colpal, values=~v_diff_dag,
-#           title = "Speed difference",
-#           opacity = 0.7)
-
-  # addPolylines(data=basemap_select_wgs,weight = 8,opacity=~dekking_scale,col=~factpal(ge50),group="OSM",
-  #              popup= ~paste("SegmentID:",segmentID, "<br>",
-  #                            "nn_nwb: ",nearest_nwb_line_id, "<br>",
-  #                            "half_hausdorff: ",afstand_nwb_lijn ,"<br>",
-  #                            "dekking: ",dekking),highlightOptions=highlightOptions(fillOpacity = 1,
-  #                             bringToFront = TRUE)) %>%
-  # Layers control
-  # addLayersControl(
-  #   overlayGroups = c("NWB", "OSM"),
-  #   options = layersControlOptions(collapsed = FALSE)) %>%
-  # 
-  #   addLegend("bottomright", colors = c("chartreuse","black","blue","red"), labels = c("Wel in OSM, ook in NWB","Wel in OSM, niet NWB",
-  #                                                                                 "Wel in NWB, ook in OSM","Wel in NWB, niet in OSM"),
-  #   title = "Legend",
-  #   opacity = 0.7)
-  # 
+   # addLegend("bottomright",bins = 5, pal = colpal, values=~v_diff_dag,
+   #          title = "Speed difference",
+   #          opacity = 0.7)
 
 
-```
-
-Export NWB shape
-```{r}
-save(nwb_select,file='db/nwb_select_features.RData')
-save(basemap_select,file='db/basemap_select_features.RData')
 ```
 
 
@@ -549,7 +535,16 @@ save(basemap_select,file='db/basemap_select_features.RData')
 
 ##afwijkende straatnamen
 
+```{r}
+nwb_select$straatnaam_verschilt <- ifelse(nwb_select$straatnaam_string_dist >= 2,1,0)
+```
+
+
 ##afwijkende gemeentes
+```{r}
+nwb_select$gemeentenaam_verschilt <- ifelse(nwb_select$gemeente_string_dist >=2,1,0)
+```
+
 
 ##waar missen nwb lijnen tov osm waar ook veel gereden wordt
 ```{r}
@@ -559,6 +554,11 @@ basemap_select$mist_in_nwb[basemap_select$dekking_dag > 0.005 &  basemap_select$
 
 ```
 
+##waar missen nwb lijnen tov osm waar ook veel gereden wordt
+```{r}
+nwb_select$mist_in_osm = ifelse(nwb_select$is_nn50 == FALSE,1,0 )
+
+```
 
 ##Waar wijkt de vorm van het nwb af van die van het osm
 
@@ -571,121 +571,62 @@ nwb_select$afwijkende_vorm[  (nwb_select$max_afstand_osm  < 30) &   (nwb_select$
 
 
 
-##rotonde vs kruispunt
 
 
+##Snelheidsverschil
+
+```{r}
+nwb_select$sneller_gereden_dan_vmax<- ifelse(nwb_select$v_mean_dag > nwb_select$vmax,1,0)
 
 
+```
+##Verdachte juncties
 
-##Leaflet om verschillen inzichtelijk te maken
+```{r}
+nwb_select$verschil_junctie<- ifelse((nwb_select$afstand_osm_splitsing > 100 & nwb_select$vmax >= 80)  |
+                                       (nwb_select$afstand_osm_splitsing > 30 & nwb_select$vmax < 80)
+                                     ,1,0)
+
+
+```
+
+##Export NWB shape naar RData
+```{r}
+save(nwb_select,file='db/nwb_select_features.RData')
+save(basemap_select,file='db/basemap_select_features.RData')
+```
+
+
+##Exporteer shapefiles per fout
 ```{r}
 
-
-#distance_matrix_OSM$ge50<- ifelse(distance_matrix_OSM$Half_Hausdorfdistance >=50, TRUE,FALSE) #hh distance greater than or equal to 50 m
-
-#merge
-basemap_select$nn_nwb_half<- distance_matrix_OSM$NWB_id[match(basemap_select$segmentID,distance_matrix_OSM$OSM_id)]
-basemap_select$hh_dist<- distance_matrix_OSM$Half_Hausdorfdistance[match(basemap_select$segmentID,distance_matrix_OSM$OSM_id)]
-basemap_select$ge50<- ifelse(basemap_select$hh_dist >=50, TRUE,FALSE)
+##totale shape
+shape_total<- nwb_select
+writeOGR(shape_total, dsn = "db/shapes/shape_total",layer = "shape_total", driver = "ESRI Shapefile")
 
 
-nwb_select$is_nn50<- ifelse(nwb_select$WVK_ID %in% basemap_select$nn_nwb_half[basemap_select$hh_dist<50],FALSE,TRUE )
-nwb_select$nn_OSM<- distance_matrix_OSM$OSM_id[match(nwb_select$WVK_ID,distance_matrix_OSM$NWB_id)]
-nwb_select$hh_dist<- distance_matrix_OSM$Half_Hausdorfdistance[match(nwb_select$WVK_ID,distance_matrix_OSM$NWB_id)]
+##Wel in NWB, niet in OSM
+shape1<- nwb_select[which(nwb_select$is_nn50==FALSE),]
+writeOGR(shape1, dsn = "db/shapes/shape1",layer = "shape1", driver = "ESRI Shapefile")
 
+##Wel in OSM, niet in NWB
+shape2<- basemap_select[which(basemap_select$afstand_nwb_lijn>50),]
+writeOGR(shape2, dsn = "db/shapes/shape2",layer = "shape2", driver = "ESRI Shapefile")
 
-nwb_select$mean_dist<- distance_matrix$mean[match(nwb_select$WVK_ID,distance_matrix$ID)]
-nwb_select$min_dist<- distance_matrix$min[match(nwb_select$WVK_ID,distance_matrix$ID)]
-nwb_select$max_dist<- distance_matrix$max[match(nwb_select$WVK_ID,distance_matrix$ID)]
-nwb_selectmed_dist<- distance_matrix$median[match(nwb_select$WVK_ID,distance_matrix$ID)]
+##Junctie (kruispunt) verschillend 
+# shape3<- nwb_select[which(nwb_select$is_nn50==FALSE),]
+# writeOGR(shape1, dsn = "db/shapes/shape1",layer = "shape1", driver = "ESRI Shapefile")
 
-nwb_select$mean25<- ifelse(nwb_select$mean_dist>=25,TRUE,FALSE)
+## Werkelijk gereden snelheid anders dan maximum snelheid
+shape4<- nwb_select[which(nwb_select$sneller_gereden_dan_vmax>0),]
+writeOGR(shape4, dsn = "db/shapes/shape4",layer = "shape4", driver = "ESRI Shapefile")
 
-# nwb_select$nn_OSM<- distance_matrix_NWB$OSM_id[match(nwb_select$WVK_ID,distance_matrix_NWB$NWB_id)]
-# nwb_select$hh_dist<- distance_matrix_NWB$Half_Hausdorfdistance[match(nwb_select$WVK_ID,distance_matrix_NWB$NWB_id)]
-# nwb_select$ge50<- ifelse(nwb_select$hh_dist >=50, TRUE, FALSE)
+## Straatnaam of gemeentenaam verschillend
+shape5<- nwb_select[which(nwb_select$is_nn50==FALSE),]
+writeOGR(shape1, dsn = "db/shapes/shape1",layer = "shape1", driver = "ESRI Shapefile")
 
-##back to wgs for plotting
-wgs<- "+proj=longlat +ellps=WGS84 +datum=WGS84 +towgs84=0,0,0"
-
-basemap_select_wgs<- spTransform(basemap_select,wgs)
-nwb_select_wgs<- spTransform(nwb_select,wgs)
-
-basemap_select_wgs<- basemap_select_wgs[order(basemap_select_wgs$nn_nwb_half),]
-nwb_select_wgs<- nwb_select_wgs[order(nwb_select_wgs$WVK_ID),]
-
-
-#export for shiny
-#save(basemap_select_wgs,file="db/basemap_select_wgs.RData")
-#save(nwb_select_wgs,file="db/nwb_select_wgs.RData")
-#save(distance_matrix,file="db/dist_matrix.RData")
-
-factpal <- colorFactor(c("green","black"), c(TRUE,FALSE))
-factpal_nwb <- colorFactor(c("blue","red"), c(TRUE,FALSE))
-
-##leaflet
-leaflet() %>% addProviderTiles(providers$CartoDB)  %>% 
-  addPolylines(data=nwb_select_wgs,opacity=0.5,col=~factpal_nwb(mean25),
-               popup=~paste("WVK_ID: ",WVK_ID,"<br>",
-                            "dist: ", hh_dist),
-               group="NWB",highlightOptions=highlightOptions(fillOpacity = 1,
-                              bringToFront = TRUE) ) %>% 
-  addPolylines(data=basemap_select_wgs,weight = 5,opacity=0.5,col=~factpal(ge50),group="OSM",
-               popup= ~paste("SegmentID:",segmentID, "<br>",
-                             "nn_nwb: ",nn_nwb_half, "<br>",
-                             "half_hausdorff: ", hh_dist),highlightOptions=highlightOptions(fillOpacity = 1,
-                              bringToFront = TRUE)) %>%
-  # Layers control
-  addLayersControl(
-    overlayGroups = c("NWB", "OSM"),
-    options = layersControlOptions(collapsed = FALSE)) %>%
-
-    addLegend("bottomright", colors = c("chartreuse","black","blue","red"), labels = c("Wel in OSM, ook in NWB","Wel in OSM, niet NWB",
-                                                                                  "Wel in NWB, ook in OSM","Wel in NWB, niet in OSM"),
-    title = "Legend",
-    opacity = 0.7)
-  
-
-#######################################3
-#visualiseer juncties
-
-
-
-python.load("omrekenen.py")
-
-
-
-  
-  juncties = lapply( 1:nrow(matrix_juncties), function(i){
-    
-   coords = data.frame('id' = matrix_juncties$id_nwb[i], 'dist' = matrix_juncties$dist[i] )
-     
-     
-    python.assign('coords', c( matrix_juncties$x_NWB[i], matrix_juncties$y_NWB[i] ) )
-  python.exec('wgsCoords = conv.fromRdToWgs( coords )')
-
- coords$lat_nwb = python.get('wgsCoords')[1]
- coords$lon_nwb = python.get('wgsCoords')[2]
-  
- 
-  
-   python.assign('coords', c( matrix_juncties$x_osm[i], matrix_juncties$y_OSM[i] ) )
-python.exec('wgsCoords = conv.fromRdToWgs( coords )')
-
- coords$lat_osm = python.get('wgsCoords')[1]
- coords$lon_osm = python.get('wgsCoords')[2]
- 
- return(coords)
-  })
-  
-  juncties = rbindlist(juncties)
-
-
-m = leaflet()
-m = addProviderTiles(m,providers$CartoDB)
-m = addCircleMarkers(m, lat = juncties$lat_nwb , lng = juncties$lon_nwb, color ='blue', popup = paste( '<h> dist:', juncties$dist , 'id:', juncties$id , '</h>' ) )
-m = addCircleMarkers(m, lat = juncties$lat_osm , lng = juncties$lon_osm, color ='red', popup = paste( '<h> dist:', juncties$dist , 'id:', juncties$id , '</h>' ) )
-
-print(m)
+## Rijrichting verschillend
+shape1<- nwb_select[which(nwb_select$is_nn50==FALSE),]
+writeOGR(shape1, dsn = "db/shapes/shape1",layer = "shape1", driver = "ESRI Shapefile")
 
 ```

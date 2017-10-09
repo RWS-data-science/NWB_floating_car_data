@@ -15,10 +15,11 @@ require(leaflet)
 ui <- bootstrapPage(
   tags$style(type = "text/css", "html, body {width:100%;height:100%}"),
   leafletOutput("map", width = "100%", height = "100%"),
-  absolutePanel(top = 10, right = 10,
-                sliderInput("distance", "Trigger distance", 10, 50,
-                            value = 50, step = 20
-                )
-                
-  )
+  checkboxGroupInput("fout", "Type verschil:", choiceValues = c("Mist_NWB","Mist_OSM","Straatnaam","Gemeentenaam","Rijrichting","Snelheid","Junctie"),choiceNames = c("Ontbreekt in NWB",
+                                                                                                                                                       "Ontbreekt in OSM",
+                                                                                                                                                       "Straatnaam",
+                                                                                                                                                       "Gemeentenaam",
+                                                                                                                                                       "Rijrichting",
+                                                                                                                                                       "Snelheid",
+                                                                                                                                                       "Junctie/kruising op andere plaats"))
 )
