@@ -15,12 +15,15 @@
 ui <- bootstrapPage(
   tags$style(type = "text/css", "html, body {width:100%;height:100%}"),
   leafletOutput("map", width = "100%", height = "100%"),
-  absolutePanel(top = 10, right = 10,
+  absolutePanel(top = 10, right = 10,fixed = TRUE,
+                p("Kies hieronder een type verschil om te visualiseren.", br(),
+                          "Het NWB is weergegeven in het blauw, de Open Streetmap" , br(), "basemap in het rood (indien van toepassing)."),
                 selectInput("fout", "Type verschil:", choices =  c(
                                                                    "Ontbreekt in NWB" =  "Mist_NWB",
                                                                    "Ontbreekt in OSM" = "Mist_OSM",
                                                                    "Straatnaam" = "Straatnaam",
                                                                    "Gemeentenaam" = "Gemeentenaam",
+                                                                   "Afwijkende vorm" = "Afwijkende_vorm",
                                                                    "Rijrichting" = "Rijrichting",
                                                                    "Snelheid" = "Snelheid",
                                                                    "Junctie" = "Junctie")

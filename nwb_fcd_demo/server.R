@@ -29,7 +29,11 @@ server<- function(input, output,session) {
     } else if (input$fout == "Snelheid"){
       nwb_select_wgs[which(nwb_select_wgs$sneller_gereden_dan_vmax == 1),]
     } else if (input$fout == "Rijrichting"){
-      nwb_select_wgs[which(nwb_select_wgs$rijrichting_verschilt == 1),]  
+      nwb_select_wgs[which(nwb_select_wgs$rijrichting_verschilt == 1),] 
+    } else if (input$fout == "Afwijkende_vorm"){
+      nwb_select_wgs[which(nwb_select_wgs$afwijkende_vorm == 1 & nwb_select_wgs$mist_in_osm == 0),] 
+    } else if (input$fout == "Junctie"){
+      nwb_select_wgs[which(nwb_select_wgs$verschil_junctie == 1 & nwb_select_wgs$mist_in_osm == 0),] 
     } else{
       nwb_select_wgs
     }
@@ -66,13 +70,17 @@ server<- function(input, output,session) {
     # Remove any existing legend, and only if the legend is
     # enabled, create a new one.
     proxy %>% clearControls()
-    if (input$fout == "Mist_OSM") {
+    if (input$fout == "Mist_OSM"|input$fout == "Afwijkende_vorm") {
       #pal <- colorpal()
-      proxy %>% addPolylines(data=basemap_select_wgs,col="red")
+      proxy %>% addPolylines(data=basemap_select_wgs,col="red",fillOpacity = 0.4)
     } else if (input$fout == "Mist_NWB"){
       proxy %>% addPolylines(data=basemap_select_wgs[which(basemap_select_wgs$mist_in_nwb == 1),],col="red")
+    } else if (input$fout == "Juncties"){
+      proxy# %>% addCircles(data=nwb_select_wgs@data[which(nwb_select_wgs$verschil_junctie == 1),],lng= ~,col="red")
     }
   })
+  
+  
   
 }
 
