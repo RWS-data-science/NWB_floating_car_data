@@ -7,8 +7,8 @@
 #    http://shiny.rstudio.com/
 #
 
-library(shiny)
-require(leaflet)
+#library(shiny)
+#require(leaflet)
 
 #c("Mist_NWB","Mist_OSM","Straatnaam","Gemeentenaam","Rijrichting","Snelheid","Junctie")
 

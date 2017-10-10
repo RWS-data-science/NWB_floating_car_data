@@ -530,17 +530,10 @@ leaflet() %>% addProviderTiles(providers$CartoDB)  %>%
    # addLegend("bottomright",bins = 5, pal = colpal, values=~v_diff_dag,
    #          title = "Speed difference",
    #          opacity = 0.7)
-<<<<<<< HEAD
 
-=======
->>>>>>> 13ae7097c7adc00b1787ae8b206b716468962eaa
-
-
-<<<<<<< HEAD
-=======
 ```
 
->>>>>>> 13ae7097c7adc00b1787ae8b206b716468962eaa
+
 
 
 
@@ -548,8 +541,8 @@ leaflet() %>% addProviderTiles(providers$CartoDB)  %>%
 
 ##afwijkende straatnamen
 
-<<<<<<< HEAD
-=======
+
+
 ```{r}
 nwb_select$straatnaam_verschilt <- ifelse(nwb_select$straatnaam_string_dist >= 2,1,0)
 ```

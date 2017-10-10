@@ -8,8 +8,8 @@
 #
 
 
-library(shiny)
-require(leaflet)
+#library(shiny)
+#require(leaflet)
 
 # Define UI for application that draws a histogram
 ui <- bootstrapPage(
@@ -25,14 +25,8 @@ ui <- bootstrapPage(
                                                                    "Snelheid" = "Snelheid",
                                                                    "Junctie" = "Junctie")
                 )
-  ),
+  )
 
-                  checkboxGroupInput("fout", "Type verschil:", choiceValues = c("Mist_NWB","Mist_OSM","Straatnaam","Gemeentenaam","Rijrichting","Snelheid","Junctie"),choiceNames = c("Ontbreekt in NWB",
-                                                                                                                                                       "Ontbreekt in OSM",
-                                                                                                                                                       "Straatnaam",
-                                                                                                                                                       "Gemeentenaam",
-                                                                                                                                                       "Rijrichting",
-                                                                                                                                                       "Snelheid",
-                                                                                                                                                       "Junctie/kruising op andere plaats"))
+                  
 
 )
