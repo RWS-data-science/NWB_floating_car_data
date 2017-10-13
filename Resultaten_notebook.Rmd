@@ -459,7 +459,7 @@ dag_agg$perc_coverage <- dag_agg$aantal/dag_agg$minuten_gelezen#(10*11*60) #11 u
 
 #remove segments with no traffic
 dag_agg<- dag_agg[which(dag_agg$aantal>0),]
-
+#save(dag_agg, file="db/dag_agg.RData")
 
 #aggregate snelheden 's nachts
 nacht_agg <- nacht %>% group_by(SegmentID) %>%
@@ -473,6 +473,7 @@ nacht_agg$perc_coverage <- nacht_agg$aantal/nacht_agg$minuten_gelezen#(10*13*60)
 
 #remove segments with no traffic
 nacht_agg<- nacht_agg[which(nacht_agg$aantal>0),]
+#save(nacht_agg, file="db/nacht_agg.RData")
 
 rm(dagen);rm(nachten)
 rm(dag);rm(nacht)

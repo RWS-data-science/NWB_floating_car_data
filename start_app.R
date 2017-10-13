@@ -16,7 +16,7 @@ nwb_select_wgs$dekking_dag_scale<- 0.2+(nwb_select_wgs$dekking_dag*0.8)/(1-0.2) 
 port <- Sys.getenv('PORT') 
 print(port)
 
-shiny::runApp("nwb_fcd_demo",host = '0.0.0.0', port = as.numeric(port))
+#shiny::runApp("nwb_fcd_demo",host = '0.0.0.0', port = as.numeric(port))
 
-#runApp("nwb_fcd_demo")
+runApp("nwb_fcd_demo")
 
